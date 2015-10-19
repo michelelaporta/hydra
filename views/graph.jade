@@ -1,0 +1,9 @@
+extends layout
+block extra_js
+  script(src='/javascripts/main.js')
+block content
+  div.container
+    div.jumbotron
+      p Monitoring #{what}
+      div#legendMeteoData
+      div#testflot

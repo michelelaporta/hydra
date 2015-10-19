@@ -1,0 +1,44 @@
+#!/bin/bash
+#
+# Run-level Startup script for the Hydra
+#
+# chkconfig: 345 91 19
+# description: Startup/Shutdown Hydra
+
+HYDRA_HOME="/home/pi/hydra"
+USER="pi"
+
+# if the executables do not exist -- display error
+
+if [ ! -f $HYDRA_HOME/start.sh -o ! -d $HYDRA_HOME ]
+then
+        echo "Hydra startup: cannot start"
+        exit 1
+fi
+
+# depending on parameter -- startup, shutdown, restart 
+
+case "$1" in
+    start)
+        # Hydra listener and instance startup
+        echo -n "Starting Hydra: "
+        su - $USER -c $HYDRA_HOME/start.sh
+        touch /var/lock/hydra
+        echo "OK"
+        ;;
+    stop)
+ 	# Hydra shutdown
+        echo -n "Shutdown Hydra: "
+        su - $USER -c "$HYDRA_HOME/stop.sh"
+        rm -f /var/lock/hydra
+        echo "OK"
+        ;;
+    reload|restart)
+        $0 stop
+        $0 start
+        ;;
+    *)
+        echo "Usage: $0 start|stop|restart|reload"
+        exit 1
+esac
+exit 0

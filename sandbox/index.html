@@ -1,0 +1,90 @@
+<html>
+    <head>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="/jsgpio-client.js"></script>
+        <script>
+            var Example = new JSGPIOClient({
+               SocketIo: {
+                   // Change 192.168.0.104 to the IP address of your Raspberry PI.
+                   URL: "http://localhost:8000"
+               },
+               GPIO: {
+                   // 'Wrote' event handler.
+                   wroteEventHandler: function(data) {
+                       var currentDate = new Date();
+                       // Write some debug text.
+                       document.getElementById('messages').innerHTML =
+                                '<br/>[' +
+                                        currentDate.getHours() +
+                                        ':' +
+                                        currentDate.getMinutes() +
+                                        ':' +
+                                        currentDate.getSeconds() +
+                                        ']&nbsp;' +
+                                        'Pin: ' + data.pin +
+                                        '&nbsp;Value: ' + data.value +
+                                        '<br/>' +
+                                        document.getElementById('messages').innerHTML
+                   },
+                   // Err event handler.
+                   errEventHandler: function(data) {
+                       var currentDate = new Date();
+                       // Write some debug text.
+                       document.getElementById('messages').innerHTML =
+                                       '<br/>[' +
+                                               currentDate.getHours() +
+                                               ':' +
+                                               currentDate.getMinutes() +
+                                               ':' +
+                                               currentDate.getSeconds() +
+                                       ']&nbsp;' +
+                                       'Pin: ' + data.pin +
+                                       '&nbsp;Value: ' + data.value +
+                                       '&nbsp;Error: ' + data.message +
+                                       '<br/>' +
+                                       document.getElementById('messages').innerHTML
+                   }
+               }
+            });
+
+            /**
+             * Example Function used for emitting write events.
+             * @param value
+             * @param pin
+             */
+            function writeToGPIO(value, pin) {
+                // Ensure values are _always_ numbers.
+                value = parseInt(value, 10);
+                pin = typeof pin !== "undefined" ? pin : parseInt(document.getElementById('pin').value, 10);
+
+                Example.write(pin, value);
+            }
+        </script>
+    </head>
+    <body>
+        <table>
+            <tr><td colspan="2">Enter a pin number and set it on or off.</td></tr>
+            <tr>
+                <td>Pin:</td>
+                <td><input type="text" value="" name="pin" id="pin"/></td>
+             </tr>
+            <tr>
+                <td>&nbsp;</td>
+                <td>
+                    <input value="On" type="button" onclick="writeToGPIO(1);"/>
+                    &nbsp;<input value="Off" type="button" onclick="writeToGPIO(0);"/>
+                </td>
+            </tr>
+        </table>
+        <br/>
+        <div>Hover in and out of one of the boxes, and pins 5 (yellow) and 3 (red) will turn on or off.</div>
+        <table style="text-align: center;">
+            <tr>
+                <td><div onmouseout="writeToGPIO(0, 5);" onmouseover="writeToGPIO(1, 5);" style="width: 50px; height: 50px; background-color: yellow;">&nbsp;</div></td>
+                <td><div onmouseout="writeToGPIO(0, 3);" onmouseover="writeToGPIO(1, 3);"  style="width: 50px; height: 50px; background-color: red;">&nbsp;</div></td>
+            </tr>
+        </table>
+        <div>Message history, reverse order (last first).</div>
+        <div name="messages" id="messages">&nbsp;</div>
+    </body>
+</html>

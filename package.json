@@ -1,0 +1,19 @@
+{
+  "name": "Hydra",
+  "version": "0.0.1-alpha",
+  "description": "Hydroponics Green House Control",
+  "author": "Michele La Porta",
+  "private": true,
+  "dependencies": {
+    "ds18x20": "^0.2.0",
+    "express": "3.3.4",
+    "i2c": "^0.2.1",
+    "jade": "1.1.5",
+    "mongodb": "1.3.23",
+    "pi-gpio": "0.0.8",
+    "socket.io": "^1.3.7"
+  },
+  "scripts": {
+    "start": "node index.js"
+  }
+}

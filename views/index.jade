@@ -1,0 +1,43 @@
+extends layout
+block extra_js
+  script(src='/javascripts/index.js')
+  //script(src='/javascripts/jsgpio-client.js')
+  script(src='/javascripts/bootstrap-toggle.min.js')
+
+block content
+  div.container
+    div.row
+     div.col-xs-2
+      .panel.panel-default
+       .panel-heading Sensors
+       .panel-body
+        div.caption Indoor
+         .legendMeteoData
+     div.col-xs-2
+      .panel.panel-default
+       .panel-heading Water
+       .panel-body
+        div.caption Inside
+         .legendWaterData
+     div.col-xs-2
+      .panel.panel-default
+       .panel-heading Light
+       .panel-body
+        div.caption Luminosity
+         .lightWaterData
+     div.col-xs-2
+      .panel.panel-default
+       .panel-heading Lights
+       .panel-body 
+        .checkbox
+         label
+          input#lights(type='checkbox', data-toggle='lights-toggle')
+     div.col-xs-2
+      .panel.panel-default
+       .panel-heading Fans
+       .panel-body 
+        .checkbox
+         label
+          input#fans(type='checkbox', data-toggle='fans-toggle')
+      
+         

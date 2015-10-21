@@ -43,7 +43,7 @@ socket.on('meteo', function(v) {
 	//d15.push([ts, v[3]]);	
 	//re_flot();	
 	var i=1;
-	$('.legendMeteoData').html('<p><strong>Temperature:</strong> '+v[1]["temperature"]+'</p><p><strong>Humidity:</strong> '+ v[1]["humidity"]);
+	$('.legend').html('<p><strong>Temperature:</strong> '+v[1]+'</p><p><strong>Humidity:</strong> '+ v[1]);
 	});
 //	$('#legend').find('tr').each(function() {
 //		$(this).append('<td class="last_val">'+v[i++]+'</td>');

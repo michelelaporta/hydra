@@ -43,7 +43,7 @@ if(arm)
 }
 else
 {
-	// dev
+	// dev mode x86
 	interval = 5;
 }
 
@@ -291,17 +291,33 @@ function saveCollection(collection,value)
             	return false;
             }
             else { 
-            	var data = [value];
-            	var ts=(new Date()).getTime();
-            	data.unshift(ts);
-        		// emit to everyone connected
-        		io.sockets.emit(collection, data);
-        		var jsonData = JSON.stringify(value);
 
         		if(collection === 'meteo')
-            		console.log('save temperature:' + value["temperature"] + ',humidity:' +  value["humidity"]);
+        		{	
+
+	            	var data = [value["temperature"],value["humidity"]];
+	            	var ts=(new Date()).getTime();
+	            	data.unshift(ts);
+	        		
+	        		all_d.push(data);
+	        		if(all_d.length>limit) {
+	        			all_d=all_d.slice(0-limit);
+	        		}
+	        		io.sockets.emit(collection, data); 
+        			console.log('save '+collection+' temperature:' + value["temperature"] + ',humidity:' +  value["humidity"]);
+          	
+        		}
         		else
+            	{
+	            	var data = [value];
+	            	var ts=(new Date()).getTime();
+	            	data.unshift(ts);
+	        		// emit to everyone connected
+	        		io.sockets.emit(collection, data);
+	        		var jsonData = JSON.stringify(value);
+	
             		console.log('save ' + collection.toString() + ':' +  value[""+collection]);
+            	}
             }
         });
     }

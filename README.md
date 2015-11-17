@@ -1,4 +1,20 @@
-Control your hydroponics green house using a Raspberry PI via the Browser using NodeJS, Socket.IO and pi-gpio and MongoDB.
+The idea
+
+Control your hydroponics green house using a Raspberry PI via the Browser using NodeJS, Socket.IO and pi-gpio MongoDB.
+
+USE AT YOUR OWN RISK wrong connection can cause damage to your PI.
+
+# Working in progress
+
+Add support for:
+
+nodejs modules:
+*node-dht-sensor (GPIO17)
+*pi-gpio
+*bh1750 
+*ds18x20 ( sensor of type /sys/bus/w1/devices/28-00000xxxxxxx)
+*2 channel relay(GPIO27,GPIO22)
+
 
 # Requirements
 
@@ -63,6 +79,23 @@ add these two lines to the end of the file:
 check i2c installation:
 
 `sudo i2cdetect -y 1`
+`     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f`
+
+`00:          -- -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`20: -- -- -- 23 -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`40: 40 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --`
+ 
+`70: 70 -- -- -- -- -- -- --`                         
 
 other diag commands:
 

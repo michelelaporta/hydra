@@ -79,6 +79,23 @@ add these two lines to the end of the file:
 check i2c installation:
 
 `sudo i2cdetect -y 1`
+`     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f`
+
+`00:          -- -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`20: -- -- -- 23 -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`40: 40 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --`
+ 
+`70: 70 -- -- -- -- -- -- --`                         
 
 `     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f`
 
@@ -174,27 +191,11 @@ To scan for WiFi networks, use the command:
 
 `sudo iwlist wlan0 scan`
 
+add a generated encrypted password:
 
-generate encrypted password:
+`sudo vi wpa_passphrase WIRELESS_SID password`
 
-`wpa_passphrase WIRELESS_SID password`
-
-
-`network={`
-
-	`ssid="WIRELESS_SID"`
-	
-	`#psk="password"`
-	
-	`psk=b5611eda6bdb45c1b9f58d9c79331c12725942c46085954f0b0652fc26985ac2`
-	
-`}`
-
-edit:
-
-`sudo vi /etc/wpa_supplicant/wpa_supplicant.conf`
-
-add:
+ to /etc/wpa_supplicant/wpa_supplicant.conf:
 
 `network={`
 
@@ -202,7 +203,7 @@ add:
 	
 	`#psk="password"`
 	
-	`psk=b5611eda6bdb45c1b9f58d9c79331c12725942c46085954f0b0652fc26985ac2`
+	`psk=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
 	
 `}`
 
@@ -220,10 +221,6 @@ add:
 `sudo apt-get install node`
 `pi@raspberrypi ~ $ node -v`
 `v4.2.1`
-
-needed??
-
-`sudo apt-get install npm`
 
 ##NODEJS I2C
 
@@ -291,29 +288,27 @@ To this:
 `sudo make install`
 
 
-## Install Dependencies ##
-
-To install dependencies, issue:
-
-
-
 ## Configuration ##
 
-To configure the application change `utils/config.js`
+To configure some parameters of the application change `utils/config.js`
+
+ds18x20 sensors are hardcoded in index.js
 
 ## Start application ##
 
 To start the application, issue:
 
-`sudo npm start`
+`./start.sh`
 
-Or:
+`./stop.sh`
 
-`sudo nodejs index.js`
+`tail -f hydra.log`
 
-Navigate to your Raspberry PI IP and port to view the application.
+Navigate to your Raspberry PI IP and port to view the application http://ip:3000
 
-# Increase swap space
+# Increase swap space 
+
+Apply only for build mongodb from source:
 
 `/etc/dphys-swapfile`
  
@@ -326,8 +321,6 @@ If you want to change the size, you need to modify the number and restart dphys-
 `/etc/init.d/dphys-swapfile stop`
 
 `/etc/init.d/dphys-swapfile start`
-
-
 
 
 ## Developer notes ##

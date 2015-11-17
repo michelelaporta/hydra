@@ -272,11 +272,30 @@ if(arm)
 			}
 			
 			// TODO use config.ds18x20 address 
-			//TODO multiple sensors
-			sensor.get('28-000005cff2dd', function (err, temp) {
-		        var waterData = {water: ''+temp};
-		        saveCollection('water',waterData);
-			});
+			
+			var temp = sensor.get('28-000005cff2dd');
+			var waterData = {water: ''+temp};
+	        console.log('waterData ' + temp);
+	        saveCollection('water',waterData);
+	        
+	        temp = sensor.get('28-000005e66282');
+	        waterData = {acqua: ''+temp};
+	        console.log('acqua ' + temp);
+	        saveCollection('acqua',waterData);
+	        
+			
+//			sensor.get('28-000005e66282', function (err, temp) {
+//		        var waterData = {water: ''+temp};
+//		        console.log('waterData ' + waterData);
+//				
+//		        saveCollection('water',waterData);
+//			});
+//			
+//			sensor.get('28-000005e66282', function (err, temp) {
+//		        var waterData2 = {water: ''+temp};
+//		        console.log('waterData2 ' + waterData2);
+//		        saveCollection('water2',waterData2);
+//			});
 
 	
 			light.readLight(function(value){
@@ -293,7 +312,10 @@ if(arm)
 	    	
 	        var waterData = {water: getRandom(18, 25).toFixed(2)};
 	    	saveCollection('water',waterData);
-	    	
+
+	        waterData = {water: getRandom(18, 25).toFixed(2)};
+	    	saveCollection('water2',waterData);
+
 	        var lightData = {light: getRandom(5, 10)};
 	        saveCollection('light',lightData);
 		}

@@ -9,7 +9,7 @@ var config={
 	dhtVersion:22,
 	dhtPin: 17,
 	lightsPin: 27,
-	fansPin: 22
+	fansPin: 22,
 };
 
 module.exports=config;

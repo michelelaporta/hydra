@@ -3,7 +3,9 @@ block extra_js
   script(src='/javascripts/index.js')
   //script(src='/javascripts/jsgpio-client.js')
   script(src='/javascripts/bootstrap-toggle.min.js')
-
+  script(src='/javascripts/jquery.dynameter.js')
+  link(rel='stylesheet', href='/stylesheets/jquery.dynameter.css')
+  
 block content
   div.container
     div.row
@@ -39,5 +41,14 @@ block content
         .checkbox
          label
           input#fans(type='checkbox', data-toggle='fans-toggle')
+     div.col-xs-2
+      .panel.panel-default
+       .panel-heading Auto
+       .panel-body 
+        .checkbox
+         label
+          input#mode(type='checkbox', data-toggle='mode-toggle')
+     div(id='payloadMeterDiv')
+     
       
          

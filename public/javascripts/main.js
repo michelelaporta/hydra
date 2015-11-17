@@ -84,3 +84,21 @@ $(function() {
 	} );
 });
 
+var $payloadMeter = null;
+
+$(function () {
+	console.log("dynameter calls " + $payloadMeter);
+	$payloadMeter = $('div#payloadMeterDiv').dynameter({
+        // REQUIRED.
+        label: 'payload',
+        value: 500,
+        unit: 'lbs',
+        min: 0,
+        max: 1000,
+        regions: {
+            800: 'warn',
+            900: 'error'
+        }
+    });
+	$payloadMeter.changeValue(238);
+});

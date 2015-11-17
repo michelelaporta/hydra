@@ -1,12 +1,17 @@
-//var socket=io.connect('http://localhost:8000'), d1=[], d5=[],  zone_delta=(new Date()).getTimezoneOffset()*60000;	// time diff in ms
 var socket=io.connect(), d1=[], d5=[],  zone_delta=(new Date()).getTimezoneOffset()*60000;	// time diff in ms
 var interval,limit=2880; // show 2 hours data (86400/5) at interval=5sec
 
-$(function() {
-    $('#lights').bootstrapToggle();
-});
-
 socket.on('initialization', function(v) {
+	
+	var mode = $('[data-toggle="mode-toggle"]').parent();
+	mode.removeClass('toggle btn btn-default off') ;
+	mode.addClass('toggle btn btn-default on') ;
+	
+//	$('#lights').bootstrapSwitch('toggleDisabled');
+//	$('#fans').bootstrapSwitch('toggleDisabled');
+	$('#lights').bootstrapToggle('disable');
+	$('#fans').bootstrapToggle('disable');
+
 	
 	var lights = $('[data-toggle="lights-toggle"]').parent();
 	
@@ -43,7 +48,7 @@ socket.on('meteo', function(v) {
 	//d15.push([ts, v[3]]);	
 	//re_flot();	
 	var i=1;
-	$('.legend').html('<p><strong>Temperature:</strong> '+v[1]+'</p><p><strong>Humidity:</strong> '+ v[1]);
+	$('.legend').html('<p><strong>Temperature:</strong> '+v[1]+'</p><p><strong>Humidity:</strong> '+ v[2]);
 	});
 //	$('#legend').find('tr').each(function() {
 //		$(this).append('<td class="last_val">'+v[i++]+'</td>');
@@ -51,46 +56,61 @@ socket.on('meteo', function(v) {
 //});
 
 socket.on('water', function(v) {
-	//console.log('newdata comes ' +v);
-	var ts=v[0]-zone_delta;
-	d1.push([ts, v[1]]);	
-	//d15.push([ts, v[3]]);	
-	//re_flot();	
-	var i=1;
+	//console.log('water data ' +v);
 	$('.legendWaterData').html('<p><strong>Water Temperature:</strong> '+v[1]["water"]);
-//	$('#legend').find('tr').each(function() {
-//	$(this).append('<td class="last_val">'+v[i++]+'</td>');
-//});
 });
 
 socket.on('light', function(v) {
-	var ts=v[0]-zone_delta;
-	d1.push([ts, v[1]]);	
-	console.log('lightData ' +  v[1]);
-	//d15.push([ts, v[3]]);	
-	//re_flot();	
-	var i=1;
+	console.log('light data ' +  v[1]);
 	$('.lightWaterData').html('<p><strong>Light:</strong> '+v[1]["light"]);
+});
+
+$(function() {
+    $('#fans').bootstrapToggle();
+    $('#lights').bootstrapToggle();
+    $('#mode').bootstrapToggle();
+});
+
+$(function() {
+//	//var btn = $('[data-toggle="mode-toggle"]').children('label.btn');
+//	var btn = $('#mode').children('label.btn');
+//    if (btn.children('input').first().attr('checked') === 'checked')
+//    {
+//    	console.log('add active ');
+//    	btn.addClass('active');
+//    }
+});
+
+
+$(function() {
+    $('#fans').change(function() {
+    	console.log('fans ' + $(this).prop('checked'));
+    	socket.emit('fans', {status: $(this).prop('checked')});
+    })
 });
 
 $(function() {
     $('#lights').change(function() {
     	console.log('lights ' + $(this).prop('checked'));
     	socket.emit('lights', {status: $(this).prop('checked')});
-
     })
 });
 
-
 $(function() {
-    $('#fans').bootstrapToggle();
-});
-
-$(function() {
-    $('#fans').change(function() {
-    	console.log('fans ' + $(this).prop('checked'));
-    	socket.emit('fans', {status: $(this).prop('checked')});
-
-    })
+    $('#mode').change(function() {
+    	checked =  $(this).prop('checked');
+    	console.log('mode ' + checked);
+    	if(checked)
+    	{
+    		$('#lights').bootstrapToggle('disable');
+    		$('#fans').bootstrapToggle('disable');
+    	}
+    	else
+    	{
+    		$('#lights').bootstrapToggle('enable');
+    		$('#fans').bootstrapToggle('enable');
+    	}
+    	socket.emit('mode', {status: checked});
+    });
 });
 

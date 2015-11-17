@@ -7,9 +7,9 @@ var config={
 	interval:60,//sec
 	limit:1440,
 	dhtVersion:22,
-	dhtPin: 4,
-	lightsPin: 13,
-	fansPin: 15
+	dhtPin: 17,
+	lightsPin: 27,
+	fansPin: 22
 };
 
 module.exports=config;

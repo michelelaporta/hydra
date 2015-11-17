@@ -8,7 +8,8 @@ var http = require('http'),
     path = require('path'),
     MongoClient = require('mongodb').MongoClient,
     Server = require('mongodb').Server,
-    CollectionDriver = require('.//utils/collectionDriver').CollectionDriver;
+    CollectionDriver = require('./utils/collectionDriver').CollectionDriver;
+    
 
 var arch = process.arch;
 var arm = process.arch === 'arm';
@@ -28,7 +29,6 @@ for (var k in interfaces) {
         }
     }
 }
-
 console.log('ip ' + ip);
 
 // use all_d to hold config.limit number of data sets for initial connections
@@ -39,7 +39,6 @@ if(arm)
 	console.log('Arch:' + arch);
 	var BH1750 = require('./bh1750');
 	var light = new BH1750();
-
 }
 else
 {
@@ -60,7 +59,24 @@ app.set('port', process.env.PORT || 3000);
 app.set('domain', '0.0.0.0');
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
+
 app.use(express.bodyParser()); // <-- add
+
+//http://stackoverflow.com/questions/25393578/nodejs-and-express-how-to-print-all-the-parameters-passed-in-get-and-post-requ
+//var bodyParser = express.bodyParser();
+// parse application/x-www-form-urlencoded
+//app.use(bodyParser.urlencoded({ extended: false }));
+// parse application/json
+//app.use(bodyParser.json());
+// parse application/vnd.api+json as json
+//app.use(bodyParser.json({ type: 'application/vnd.api+json' }));
+
+var bodyParser = require('body-parser');
+app.use(bodyParser.json()); // for parsing application/json
+app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
+var multer = require('multer'); // v1.0.5
+var upload = multer(); // for parsing multipart/form-data
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.configure('development', function(){
@@ -71,10 +87,14 @@ app.configure('production', function(){
   app.use(express.errorHandler()); 
 });
 
+var preferences = require('./routes/preferences')(CollectionDriver);
+
 // Routes
 app.get('/', routes.index);
 app.get('/about', about.list);
 app.get('/graph', graph.show);
+app.get('/preferences', preferences.list);
+//app.post('/preferences', preferences);
 //app.get('/flot', routes.history);
 
 function gt() {
@@ -125,8 +145,11 @@ app.get('/:collection/:entity', function(req, res) { //I
    }
 });
 
-app.post('/:collection', function(req, res) { //A
+app.post('/:collection',function(req, res) { //A
     var object = req.body;
+    //console.log('email ' +  req.body.email);
+    //console.log('pwd ' +  req.body.pwd);
+
     var collection = req.params.collection;
     
     collectionDriver.save(collection, object, function(err,docs) {
@@ -178,6 +201,7 @@ var lightsStatus = 0;
 var fansStatus = 0;
 var waterSensor = 0;
 
+var now = new Date();
 /** RASPBERRY ONLY */
 if(arm)
 {
@@ -230,7 +254,6 @@ if(arm)
 
 		if(arm)
 		{
-			
 			var sensor = require('ds18x20');
 			var loaded;
 			sensor.isDriverLoaded(function (err, isLoaded) {
@@ -248,7 +271,8 @@ if(arm)
 				});
 			}
 			
-			// TODO use config.ds18x20 address
+			// TODO use config.ds18x20 address 
+			//TODO multiple sensors
 			sensor.get('28-000005cff2dd', function (err, temp) {
 		        var waterData = {water: ''+temp};
 		        saveCollection('water',waterData);
@@ -294,17 +318,19 @@ function saveCollection(collection,value)
 
         		if(collection === 'meteo')
         		{	
-
-	            	var data = [value["temperature"],value["humidity"]];
-	            	var ts=(new Date()).getTime();
-	            	data.unshift(ts);
-	        		
-	        		all_d.push(data);
-	        		if(all_d.length>limit) {
-	        			all_d=all_d.slice(0-limit);
-	        		}
-	        		io.sockets.emit(collection, data); 
-        			console.log('save '+collection+' temperature:' + value["temperature"] + ',humidity:' +  value["humidity"]);
+        			if(value["temperature"] !== 0.00 && value["humidity"] !== 0.00)
+		        	{
+		            	var data = [value["temperature"],value["humidity"]];
+		            	var ts=(new Date()).getTime();
+		            	data.unshift(ts);
+		        		
+		        		all_d.push(data);
+		        		if(all_d.length>limit) {
+		        			all_d=all_d.slice(0-limit);
+		        		}
+		        		io.sockets.emit(collection, data); 
+	        			console.log('save '+collection+' temperature:' + value["temperature"] + ',humidity:' +  value["humidity"]);
+		        	}
           	
         		}
         		else
@@ -454,9 +480,15 @@ io.sockets.on('connection', function(socket) {
 		else
 		{
 			if(d.status)
+			{
+				fansStatus = 0;
 				console.log('fans on');
+			}
 			else
+			{
+				fansStatus = 1;
 				console.log('fans off');
+			}
 		}
 	});
 });
@@ -464,6 +496,49 @@ io.sockets.on('connection', function(socket) {
 server.listen(app.get('port'), function(){
   console.log('Express server listening on '+app.get('domain')+ ':' + app.get('port'));
 });
+
+
+//http://www.codexpedia.com/javascript/nodejs-cron-schedule-examples/
+var cron = require('node-schedule');
+/**
+//light schedule off at 6:59 am:
+cron.scheduleJob('59 6 * * *', function(){
+	if(arm)
+	{
+		var gpio = require("pi-gpio");
+		gpio.write(lightsPin, 0, function() {
+			lightsStatus = 1;
+			console.log('scheduled write light off at ' + new Date());
+		});
+	}
+	else
+	{
+		console.log('scheduled write light off at ' + new Date());
+		lightsStatus = 1;
+	}
+});
+
+//Every even minute
+cron.scheduleJob('0-58/2 * * * *', function(){
+
+//light schedule on at 12:59 am:
+cron.scheduleJob('59 18 * * *', function(){
+    console.log('light on at ' + new Date());
+    if(arm)
+	{
+		var gpio = require("pi-gpio");
+		gpio.write(lightsPin, 1, function() {
+			console.log('scheduled write light on at ' + new Date());
+			lightsStatus = 0;
+		});
+	}
+	else
+	{
+		lightsStatus = 0;
+		console.log('scheduled write light on at ' + new Date());
+	}    
+});
+*/
 
 process.on('SIGTERM', function() {
     console.log("\nShutdown..");
@@ -482,6 +557,4 @@ process.on('SIGTERM', function() {
 	}
     console.log("Exiting...");
     process.exit();
-    
 });
-

@@ -1,16 +1,289 @@
 Control your hydroponics green house using a Raspberry PI via the Browser using NodeJS, Socket.IO and pi-gpio and MongoDB.
 
-# Requirements #
+# Requirements
 
-##Install mongoDB
+## Install Raspbian Jessie
+
+`wget https://downloads.raspberrypi.org/raspbian_latest`
+
+unzip the archive then:
+
+`sudo dd bs=4M if=2015-09-24-raspbian-jessie.img of=/dev/sdb`
+
+## Preliminary setup ##
+ 
+after boot change password:
+
+ `passwd`
+ 
+check connectivity:
+
+ `ping 8.8.8.8`
+
+update and upgrade:
+
+ `sudo apt-get update`
+ 
+ `sudo apt-get upgrade`
 
 
-See http://c-mobberley.com/wordpress/2013/10/14/raspberry-pi-mongodb-installation-the-working-guide/
+## Install Additional Packages ##
 
-To avoid memory leak during compilation increase swap :
+`sudo apt-get install -y build-essential python-dev python-smbus i2c-tools`
+ 
+##I2C SETUP
+
+Installing Kernel Support (with Raspi-Config)
+`raspi-config -> advanced -> enable i2c`
+
+
+sudo vi /etc/modules
+add these two lines to the end of the file:
+
+`i2c-bcm2708`
+
+`i2c-dev`
+
+sudo vi /etc/modprobe.d/raspi-blacklist.conf
+add these two lines to the end of the file:
+
+`#blacklist spi-bcm2708`
+
+`#blacklist i2c-bcm2708`
+
+sudo vi /boot/config.txt
+add these two lines to the end of the file:
+
+`dtparam=i2c1=on`
+
+`dtparam=i2c_arm=on`
+
+`sudo reboot`
+
+check i2c installation:
+
+`sudo i2cdetect -y 1`
+
+other diag commands:
+
+`lsmod | grep i2c_`
+
+`dmesg | grep i2c`
+
+`sudo i2cdump -y 1 0x40`
+
+`i2cdetect -F 0x40`
+
+
+##Install WiringPI
+
+`git clone git://git.drogon.net/wiringPi`
+
+`cd wiringPi`
+
+`./build`
+
+## Install OneWire support
+
+`sudo vi /boot/config.txt`
+
+add:
+
+`dtoverlay=w1-gpio`
+
+then:
+
+`sudo reboot`
+
+`sudo modprobe -v w1_gpio`
+
+`sudo modprobe w1-gpio`
+
+`sudo modprobe w1-therm`
+
+`cd /sys/bus/w1/devices`
+
+`ls`
+
+`cd 28-xxxx (change this to match what serial number pops up)`
+
+`cat w1_slave`
+
+## Install TL-WN725N V2 Driver
+
+@see <https://www.raspberrypi.org/forums/viewtopic.php?p=462982> 
+
+@see <https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md>
+
+@see <http://omarriott.com/aux/raspberry-pi-wifi/>
+
+`wget https://dl.dropboxusercontent.com/u/80256631/install-8188eu.tgz`
+
+`tar xvzf install-8188eu.tgz`
+ 
+`chmod 755 install-8188eu.sh`
+ 
+`sudo ./install-8188eu.sh`
+
+`sudo cat /etc/network/interfaces`
+
+add:
+
+`allow-hotplug wlan0`
+
+`iface wlan0 inet manual`
+
+`wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf`
+
+## Wifi setup
+
+To scan for WiFi networks, use the command:
+
+`sudo iwlist wlan0 scan`
+
+
+generate encrypted password:
+
+`wpa_passphrase WIRELESS_SID password`
+
+
+`network={`
+
+	`ssid="WIRELESS_SID"`
+	
+	`#psk="password"`
+	
+	`psk=b5611eda6bdb45c1b9f58d9c79331c12725942c46085954f0b0652fc26985ac2`
+	
+`}`
+
+edit:
+
+`sudo vi /etc/wpa_supplicant/wpa_supplicant.conf`
+
+add:
+
+`network={`
+
+	`ssid="WIRELESS_SID"`
+	
+	`#psk="password"`
+	
+	`psk=b5611eda6bdb45c1b9f58d9c79331c12725942c46085954f0b0652fc26985ac2`
+	
+`}`
+
+`sudo ifdown wlan0`
+ 
+`sudo ifup wlan0`
+
+#Install mongoDB
+
+`sudo apt-get install mongodb-server`
+
+#Install node.js 
+
+`curl -sLS https://apt.adafruit.com/add | sudo bash`
+`sudo apt-get install node`
+`pi@raspberrypi ~ $ node -v`
+`v4.2.1`
+
+needed??
+
+`sudo apt-get install npm`
+
+##NODEJS I2C
+
+@see <https://github.com/kelly/node-i2c/issues/69>
+
+change from: "i2c": "0.2.0"
+to 	   : "i2c": "https://github.com/polaris/node-i2c"
+
+`npm install polaris/node-i2c`
+
+
+# GPIO ADMIN
+
+Install GPIO Admin, to allow users other than root to access the GPIO:
+
+@see <https://github.com/quick2wire/quick2wire-gpio-admin>
+
+`gpio-admin export 22`
+
+gpio-admin: failed to change group ownership of /sys/devices/virtual/gpio/gpio22/direction: No such file or directory
+
+@see https://github.com/nickfloyd/raspberry-beacons
+
+Open and modify the gpio-admin.c file:
+
+Change this:
+
+`int size = snprintf(path, PATH_MAX, "/sys/devices/virtual/gpio/gpio%u/%s", pin, filename);`
+
+To this:
+
+`int size = snprintf(path, PATH_MAX, "/sys/class/gpio/gpio%u/%s", pin, filename);`
+
+`make`
+
+`sudo make install` 
+
+Open and modify the pi-gpio.js file:
+
+Change this:
+
+`sysFsPath = "/sys/devices/virtual/gpio";`
+
+To this:
+
+`sysFsPath = "/sys/class/gpio";`
+
+
+# BCM2835
+
+@see <http://www.airspayce.com/mikem/bcm2835/>
+
+`wget http://www.airspayce.com/mikem/bcm2835/bcm2835-1.46.tar.gz`
+
+`tar zxvf bcm2835-1.46.tar.gz`
+ 
+`cd bcm2835-1.46/`
+
+`./configure`
+ 
+`make`
+
+`sudo make check`
+
+`sudo make install`
+
+
+## Install Dependencies ##
+
+To install dependencies, issue:
+
+
+
+## Configuration ##
+
+To configure the application change `utils/config.js`
+
+## Start application ##
+
+To start the application, issue:
+
+`sudo npm start`
+
+Or:
+
+`sudo nodejs index.js`
+
+Navigate to your Raspberry PI IP and port to view the application.
+
+# Increase swap space
 
 `/etc/dphys-swapfile`
-
+ 
 The content is very simple. By default my Raspbian has 100MB of swap:
 
 `CONF_SWAPSIZE=100`
@@ -21,187 +294,8 @@ If you want to change the size, you need to modify the number and restart dphys-
 
 `/etc/init.d/dphys-swapfile start`
 
-### MongoDB requirements
 
-sudo apt-get update
 
-sudo apt-get upgrade
-
-sudo apt-get install build-essential libboost-filesystem-dev libboost-program-options-dev libboost-system-dev libboost-thread-dev scons libboost-all-dev python-pymongo git
-
-cd ~
-
-git clone https://github.com/skrabban/mongo-nonx86
-
-cd mongo-nonx86
-
-sudo scons
-
-sudo scons --prefix=/opt/mongo install
-
-sudo adduser --firstuid 100 --ingroup nogroup --shell /etc/false --disabled-password --gecos "" --no-create-home mongodb
-
-sudo mkdir /var/log/mongodb/
-
-sudo chown mongodb:nogroup /var/log/mongodb/
-
-sudo mkdir /var/lib/mongodb
-
-sudo chown mongodb:nogroup /var/lib/mongodb
-
-sudo cp debian/init.d /etc/init.d/mongod
-
-sudo cp debian/mongodb.conf /etc/
-
-sudo ln -s /opt/mongo/bin/mongod /usr/bin/mongod
-
-sudo chmod u+x /etc/init.d/mongod
-
-sudo update-rc.d mongod defaults
-
-sudo /etc/init.d/mongod start
-
-pi@raspberrypi ~ $ mongo
-
-MongoDB shell version: 2.1.1-pre-
-
-connecting to: test
-
->
-
-REST is not enabled.  use --rest to turn on.
-
-sudo nano /etc/init.d/mongod
-
-Scroll down to:
-
-DAEMONUSER=${DAEMONUSER:-mongodb}
-
-DAEMON_OPTS=${DAEMON_OPTS:-"--dbpath $DATA --logpath $LOGFILE run"}
-
-DAEMON_OPTS="$DAEMON_OPTS --config $CONF"
-
-
-And add in –rest to give:
-
-DAEMONUSER=${DAEMONUSER:-mongodb}
-
-DAEMON_OPTS=${DAEMON_OPTS:-"--dbpath $DATA --logpath $LOGFILE run"}
-
-DAEMON_OPTS="$DAEMON_OPTS --config $CONF --rest"
-
-sudo /etc/init.d/mongod restart
-
-
-
-#Install node.js 
-
-Install the latest node.js on your Raspbian:
-
-https://github.com/joyent/node/wiki/installing-node.js-via-package-manager
-
-
-Install GPIO Admin, to allow users other than root to access the GPIO:
-
-https://github.com/quick2wire/quick2wire-gpio-admin
-
-## Install Dependencies ##
-
-To install dependencies, issue:
-
-npm install
-
-## Configuration ##
-
-To configure the application change utils/config.js.
-
-## Start application ##
-
-To start the application, issue:
-
-npm start
-
-Or:
-
-nodejs index.js
-
-Navigate to your Raspberry PI IP and port to view the application.
-
-## Raspberry Devices ##
-
-#### Enable IC2
-
-sudo apt-get install python-smbus
-
-sudo apt-get install i2c-tools
-
- sudo raspi-config 
- 
- advantaced options -> I2C enable kernel module -> reboot
- 
- sudo nano /etc/modules add 
- 
-i2c-bcm2708 
-i2c-dev
-
-sudo vi  /etc/modprobe.d/raspi-blacklist.conf
-
-`#blacklist spi-bcm2708`
-
-`#blacklist i2c-bcm2708`
-
-sudo vi /boot/config.txt
-
-`dtparam=i2c1=on`
-
-`dtparam=i2c_arm=on`
-
-sudo reboot
-
-sudo i2cdetect -y 1
-
- 
-
-#### 
-
-DS18B20 SENSOR
-
-Add OneWire support
-vi /boot/config.txt
-
-dtoverlay=w1-gpio
-
-sudo reboot
-
-sudo modprobe w1-gpio
-
-sudo modprobe w1-therm
-
-cd /sys/bus/w1/devices
-
-ls
-
-cd 28-xxxx (change this to match what serial number pops up)
-
-cat w1_slave
-
-
-#### BH1750 Sensor
-
-
-##### Enable I2C
-
-sudo i2cdetect -y 1
-
-vi /etc/modprobe.d/raspi-blacklist.conf
-
-sudo vi /etc/modprobe.d/raspi-blacklist.conf
-
-sudo reboot
-
-nodejs integration thanks to:
-
-https://github.com/miroRucka/bh1750
 
 ## Developer notes ##
 

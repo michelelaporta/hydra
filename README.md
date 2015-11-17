@@ -1,4 +1,20 @@
-Control your hydroponics green house using a Raspberry PI via the Browser using NodeJS, Socket.IO and pi-gpio and MongoDB.
+The idea
+
+Control your hydroponics green house using a Raspberry PI via the Browser using NodeJS, Socket.IO and pi-gpio MongoDB.
+
+USE AT YOUR OWN RISK wrong connection can cause damage to your PI.
+
+# Working in progress
+
+Add support for:
+
+nodejs modules:
+*node-dht-sensor (GPIO17)
+*pi-gpio
+*bh1750 
+*ds18x20 ( sensor of type /sys/bus/w1/devices/28-00000xxxxxxx)
+*2 channel relay(GPIO27,GPIO22)
+
 
 # Requirements
 
@@ -64,6 +80,24 @@ check i2c installation:
 
 `sudo i2cdetect -y 1`
 
+`     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f`
+
+`00:          -- -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`20: -- -- -- 23 -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`40: 40 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- `
+
+`60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --`
+ 
+`70: 70 -- -- -- -- -- -- --`                         
+
 other diag commands:
 
 `lsmod | grep i2c_`
@@ -101,13 +135,12 @@ then:
 
 `sudo modprobe w1-therm`
 
-`cd /sys/bus/w1/devices`
+`cat /sys/bus/w1/devices/w1_bus_master1/28-xxxx/w1_slave`
+ 
+`5f 01 4b 46 7f ff 01 x0 9x : crc=9b YES`
 
-`ls`
+`5f 01 4b 46 7f ff 01 x0 9x t=21937`
 
-`cd 28-xxxx (change this to match what serial number pops up)`
-
-`cat w1_slave`
 
 ## Install TL-WN725N V2 Driver
 

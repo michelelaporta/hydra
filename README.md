@@ -2,7 +2,17 @@ The idea
 
 Control your hydroponics green house using a Raspberry PI via the Browser using NodeJS, Socket.IO and pi-gpio MongoDB.
 
-USE AT YOUR OWN RISK wrong connection can cause damage to your PI.
+USE AT YOUR OWN RISK wrong connections can cause damage to your RaspberryPI.
+
+# Arm vs x86
+
+In order to develop there a flag for arm vs x86
+
+To run into RaspberryPI manually add the following dependencies to package.json:
+
+
+    "node-dht-sensor": "0.0.8",
+    "i2c": "https://github.com/polaris/node-i2c"
 
 # Working in progress
 
@@ -331,3 +341,30 @@ start.sh - Provides a basic shell script to run the application in background.
 
 start.sh - Provides a basic shell script to gracefully stop the nodejs application.
 
+
+# Updates
+
+Added support for https.
+
+
+	var options = {
+     key: fs.readFileSync('file.pem'),
+     cert: fs.readFileSync('file.crt')
+    };
+
+
+Where /path/to/file.pem is the path to a file containing an RSA key, generated (for example) by:
+
+$ openssl genrsa 1024 > /path/to/file.pem
+and /path/to/file.crt is the path to a file containing an SSL certificate, generated (for example) by:
+
+$ openssl req -new -key /path/to/file.pem -out csr.pem
+$ openssl x509 -req -days 365 -in csr.pem -signkey /path/to/file.pem -out /path/to/file.crt
+
+Generate the privatekey.pem and certificate.pem files using the following commands:
+
+openssl genrsa -out privatekey.pem 1024 
+openssl req -new -key privatekey.pem -out certrequest.csr 
+openssl x509 -req -in certrequest.csr -signkey privatekey.pem -out certificate.pem
+
+Added react-camera support.

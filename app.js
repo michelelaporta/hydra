@@ -6,13 +6,11 @@ var express = require('express'),
     bodyParser = require('body-parser');
 
 var db = require('./model/db'),
-    blob = require('./model/blobs'),
     planner = require('./model/planner'),
     preference = require('./model/preferences'),
     meteo = require('./model/meteo');
 
 var routes = require('./routes/index'),
-    blobs = require('./routes/blobs'),
     preferences = require('./routes/preferences'),
     planner = require('./routes/planner')
     graph = require('./routes/graph'),
@@ -35,7 +33,6 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', routes);
-app.use('/blobs', blobs);
 //app.use('/users', users);
 app.use('/preferences', preferences);
 app.use('/planner', planner);

@@ -1,0 +1,64 @@
+extends layout
+block extra_js
+  script(src='/javascripts/index.js')
+  // from graph
+  script(src='/javascripts/main.js')
+  //script(src='/javascripts/jsgpio-client.js')
+  script(src='/javascripts/bootstrap-toggle.min.js')
+  //script(src='/javascripts/jquery.dynameter.js')
+  //link(rel='stylesheet', href='/stylesheets/jquery.dynameter.css')
+  //link(rel='stylesheet', href='/stylesheets/jumbotron-narrow.css')
+  //script(src='/javascripts/dhtmlxscheduler.js')
+  //link(rel='stylesheet', href='/stylesheets/dhtmlxscheduler.css')
+  link(rel='stylesheet', href='/stylesheets/camera.css')
+  script(src='/javascripts/11057100_835863049837306_1087123501_n.js')
+  script(src='/javascripts/11057104_994066363946450_2043645399_n.js')
+  //script(src='//fb.me/react-0.13.3.js')
+  //script(src='//fb.me/JSXTransformer-0.13.3.js')
+  script(src='/javascripts/react-webcam.js')
+  
+block content
+  div.container
+    div.row
+     div.col-xs-2
+      .panel.panel-default
+       .panel-heading Auto
+       .panel-body 
+        .checkbox
+         label
+          input#mode(type='checkbox', data-toggle='mode-toggle')
+     div.col-xs-2
+      .panel.panel-default
+       .panel-heading Lights
+       .panel-body 
+        .checkbox
+         label
+          input#lights(type='checkbox', data-toggle='lights-toggle')
+     div.col-xs-2
+      .panel.panel-default
+       .panel-heading Fans
+       .panel-body 
+        .checkbox
+         label
+          input#fans(type='checkbox', data-toggle='fans-toggle')
+    div.row
+     div.col-xs-2
+      .panel.panel-default
+       .panel-heading Sensors
+       .panel-body
+        div.caption Indoor
+         .legend
+        div.caption Water
+         .legendWaterData
+        div.caption Water2
+         .legendWater2Data
+        div.caption Luminosity
+         .lightWaterData
+     div.col-xs-8
+      button.btn.btn-info.start(type='button', id='', onclick='startStream()') Start Camera
+      .row
+       img#stream
+     div.col-xs-4
+      h6#legend
+      h5#update_int
+      div#testflot|loading data

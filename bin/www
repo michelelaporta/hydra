@@ -1,0 +1,606 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('express-node-mongo-skeleton:server');
+var http = require('http');
+
+var spawn = require('child_process').spawn;
+var proc;
+var https = require('https');
+config = require('../utils/config');
+
+var arch = process.arch;
+var arm = process.arch === 'arm';
+
+var lightsPin = parseInt(config.lightsPin);
+var fansPin = parseInt(config.fansPin);
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '4443');
+app.set('port', port);
+app.set('domain', '0.0.0.0');
+
+var fs = require('fs');
+
+//https
+var options = {
+  key: fs.readFileSync('file.pem'),
+  cert: fs.readFileSync('file.crt')
+};
+
+/**
+ * Create HTTP server.
+ */
+
+var serverHttps = https.createServer(options,app).listen(port);
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+//var node =server.listen(port);
+serverHttps.on('error', onError);
+serverHttps.on('listening', onListening);
+
+var io = require('socket.io').listen(serverHttps);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = serverHttps.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}
+
+
+//use all_d to hold config.limit number of data sets for initial connections
+var limit=config.limit, interval=config.interval, all_d=[];
+
+var lightsInitialized = 0;
+var fansInitialized = 0;
+//var waterInitialized = false;
+
+var lightsStatus = 0;
+var fansStatus = 0;
+var waterSensor = 0;
+
+var sockets = {};
+
+io.sockets.on('connection', function(socket) {
+	
+  sockets[socket.id] = socket;
+  console.log("Total clients connected : ", Object.keys(sockets).length);
+
+	if(arm)
+	{
+		var gpio = require("pi-gpio");
+		//TODO get it from gpio state
+		if(lightsInitialized)
+		{
+			gpio.read(lightsPin, function(err, value) {
+			    if(err)
+			    	throw err;
+			    else
+				    lightsStatus = value;
+			});
+		    console.log('lights: ' + lightsStatus); // The current state of the pin 
+		}
+		else
+			throw new Error('could not determinate light status');
+		
+		if(fansInitialized)
+		{
+			gpio.read(fansPin, function(err, value) {
+				if(err)
+			    	throw err;
+			    else
+				    fansStatus = value;
+			});
+		    console.log('fan: ' + fansStatus); // The current state of the pin 
+			
+		}
+		else
+			throw new Error('could not determinate fans status');
+	}
+   
+	socket.emit('initialization', {lights:lightsStatus==false, fansPin:fansStatus==false});
+	
+	socket.emit('init', {interval:interval, limit:limit});
+	if(all_d.length>0) {
+		socket.emit('history', all_d);
+	}
+	
+	socket.on( 'reqint', function(d) {
+		if(!isNaN(d)) {
+			interval=d;
+			console.log('setting update interval to %d.', d);
+		}
+		socket.broadcast.emit('setint', d);
+	});
+	
+//	socket.on('disconnect', function(){
+//		console.log('disconnected');
+//	});
+	socket.on('disconnect', function() {
+	    delete sockets[socket.id];
+
+	    // no more sockets, kill the stream
+	    if (Object.keys(sockets).length == 0) {
+	      app.set('watchingFile', false);
+	      if (proc) proc.kill();
+	      fs.unwatchFile('./stream/image_stream.jpg');
+	    }
+	  });
+	
+	socket.on('lights', function(d){
+		if(arm)
+		{
+			var gpio = require("pi-gpio");
+			if(d.status)
+			{
+				// check current gpio state
+				if(lightsStatus != 0)
+				{
+					gpio.write(lightsPin, 0, function() {
+						console.log('write lights on');
+						lightsStatus = 0;
+					});
+				}
+			}
+			else
+			{
+				// check current gpio state
+				if(lightsStatus != 1)
+				{
+		            gpio.write(lightsPin, 1, function() {
+						console.log('write lights off');
+						lightsStatus = 1;
+		            });
+				}
+			}
+		}
+		else
+		{
+			if(d.status)
+				console.log('lights on');
+			else
+				console.log('lights off');
+		}
+	});
+	
+	socket.on('fans', function(d)
+	{
+		if(arm)
+		{
+			var gpio = require("pi-gpio");
+			if(d.status)
+			{
+				// check current gpio state
+				if(fansStatus != 0)
+				{
+					gpio.write(fansPin, 0, function() {
+						console.log('write fans on');
+						fansStatus = 0;
+					});
+				}
+			}
+			else
+			{
+				// check current gpio state
+				if(fansStatus != 1)
+				{
+		            gpio.write(fansPin, 1, function() {
+						console.log('write fans off');
+						fansStatus = 1;
+		            });
+				}
+			}
+		}
+		else
+		{
+			if(d.status)
+			{
+				fansStatus = 0;
+				console.log('fans on');
+			}
+			else
+			{
+				fansStatus = 1;
+				console.log('fans off');
+			}
+		}
+	});
+	
+	socket.on('start-stream', function() {
+	    startStreaming(io);
+	  });	
+});
+
+function stopStreaming() {
+	  if (Object.keys(sockets).length == 0) {
+	    app.set('watchingFile', false);
+	    if (proc) proc.kill();
+	    fs.unwatchFile('./stream/image_stream.jpg');
+	  }
+	}
+
+function startStreaming(io) {
+
+  if (app.get('watchingFile')) {
+    io.sockets.emit('liveStream', 'image_stream.jpg?_t=' + (Math.random() * 100000));
+    return;
+  }
+  if(arm)
+  {
+   var args = ["-w", "640", "-h", "480", "-o", "./stream/image_stream.jpg", "-t", "999999999", "-tl", "100"];
+   proc = spawn('raspistill', args);
+  }
+  else
+  {
+	var args = ["-y","-f","video4linux2","-i", "/dev/video0","-vframes","1","./stream/image_stream.jpg"];
+	proc = spawn('ffmpeg', args);
+	console.log('startStreaming Spawned child pid: ' + proc.pid);
+   
+  }
+
+  console.log('Watching for changes...');
+
+  app.set('watchingFile', true);
+
+  fs.watchFile('./stream/image_stream.jpg', function(current, previous) {
+    io.sockets.emit('liveStream', 'image_stream.jpg?_t=' + (Math.random() * 100000));
+  })
+}
+
+//http://www.codexpedia.com/javascript/nodejs-cron-schedule-examples/
+var cron = require('node-schedule');
+
+
+//setInterval(function() {
+//	if(!arm)
+//	{
+//		var args = ["-y","-f","video4linux2","-i", "/dev/video0","-vframes","1","./stream/image_stream.jpg"];
+//		proc = spawn('ffmpeg', args);
+//		console.log('Spawned child pid: ' + proc.pid +' at ' + new Date());
+//	}
+//	else
+//	{
+//	   var args = ["-w", "640", "-h", "480", "-o", "./stream/image_stream.jpg", "-t", "999999999", "-tl", "100"];
+//	   proc = spawn('raspistill', args);
+//		
+//	}
+//}, 60000);
+
+//Every even minute
+//cron.scheduleJob('0-58/2 * * * *', function(){
+//Every even minute
+cron.scheduleJob('* * * * *', function(){
+	console.log('scheduled write light off at ' + new Date());
+
+	if(arm)
+	{
+		var sensor = require('ds18x20');
+		var loaded;
+		sensor.isDriverLoaded(function (err, isLoaded) {
+			if(err)
+				throw err;
+			loaded = isLoaded;
+		});
+	
+		if(loaded == false)
+		{
+			console.log('loading ds18x20 driver..');
+			sensor.loadDriver(function (err) {
+			    if (err) 
+			    	throw err;
+			});
+		}
+		
+		// TODO use config.ds18x20 address 
+		
+		var temp = sensor.get('28-000005cff2dd');
+		var waterData = {water: ''+temp};
+	    console.log('waterData ' + temp);
+	    saveCollection('water',waterData);
+	    
+	    temp = sensor.get('28-000005e66282');
+	    waterData = {water2: ''+temp};
+	    console.log('water2 ' + temp);
+	    saveCollection('water2',waterData);
+	    
+		
+	//	sensor.get('28-000005e66282', function (err, temp) {
+	//        var waterData = {water: ''+temp};
+	//        console.log('waterData ' + waterData);
+	//		
+	//        saveCollection('water',waterData);
+	//	});
+	//	
+	//	sensor.get('28-000005e66282', function (err, temp) {
+	//        var waterData2 = {water: ''+temp};
+	//        console.log('waterData2 ' + waterData2);
+	//        saveCollection('water2',waterData2);
+	//	});
+	
+	
+		light.readLight(function(value){
+		    var lightData = {light:value};
+		    saveCollection('light',lightData);
+		});
+	
+	}
+	else
+	{	
+		//!arm random data
+	    var meteoData = {temperature:getRandom(19, 30).toFixed(2),humidity:getRandom(40, 80).toFixed(2)};
+	    saveCollection('meteo',meteoData);
+	    saveMeteo('meteo',meteoData);
+		
+//	    var waterData = {water: getRandom(18, 25).toFixed(2)};
+//		saveCollection('water',waterData);
+//	
+//	    waterData = {water: getRandom(18, 25).toFixed(2)};
+//		saveCollection('water2',waterData);
+//	
+//	    var lightData = {light: getRandom(5, 10)};
+//	    saveCollection('light',lightData);
+	}
+});
+
+mongoose = require('mongoose'); //mongo connection
+
+function saveMeteo(collection,value)
+{
+	mongoose.model('meteo').create(value, function (err, meteo) {
+          if (err) {
+              res.send("There was a problem adding the information to the database.");
+          } else {
+              //Blob has been created
+              console.log('POST creating new meteo: ' + meteo);
+              
+          	var data = [value["temperature"],value["humidity"]];
+        	var ts=(new Date()).getTime();
+        	data.unshift(ts);
+    		
+    		all_d.push(data);
+    		if(all_d.length>limit) {
+    			all_d=all_d.slice(0-limit);
+    		}
+    		io.sockets.emit(collection, data); 
+			console.log('save '+collection+' temperature:' + value["temperature"] + ',humidity:' +  value["humidity"]);
+          }
+    });	
+	/**
+    if ( typeof collectionDriver !== 'undefined' && collectionDriver )
+    {
+        collectionDriver.save(collection,value , function(err,docs) {
+            if (err) { 
+            	console.error(err);
+            	return false;
+            }
+            else { 
+
+        		if(collection === 'meteo')
+        		{	
+        			if(value["temperature"] !== 0.00 && value["humidity"] !== 0.00)
+		        	{
+		            	var data = [value["temperature"],value["humidity"]];
+		            	var ts=(new Date()).getTime();
+		            	data.unshift(ts);
+		        		
+		        		all_d.push(data);
+		        		if(all_d.length>limit) {
+		        			all_d=all_d.slice(0-limit);
+		        		}
+		        		io.sockets.emit(collection, data); 
+	        			console.log('save '+collection+' temperature:' + value["temperature"] + ',humidity:' +  value["humidity"]);
+		        	}
+          	
+        		}
+        		else
+            	{
+	            	var data = [value];
+	            	var ts=(new Date()).getTime();
+	            	data.unshift(ts);
+	        		// emit to everyone connected
+	        		io.sockets.emit(collection, data);
+	        		var jsonData = JSON.stringify(value);
+	
+            		console.log('save ' + collection.toString() + ':' +  value[""+collection]);
+            	}
+            }
+        });
+    }
+    */
+}
+
+function saveCollection(collection,value)
+{
+	/**
+	mongoose.model('Preferences').create({
+        name : name,
+        badge : badge,
+        dob : dob,
+        isloved : isloved
+    }, function (err, blob) {
+          if (err) {
+              res.send("There was a problem adding the information to the database.");
+          } else {
+              //Blob has been created
+              console.log('POST creating new blob: ' + blob);
+              res.format({
+                  //HTML response will set the location and redirect back to the home page. You could also create a 'success' page if that's your thing
+                html: function(){
+                    // If it worked, set the header so the address bar doesn't still say /adduser
+                    res.location("preferences");
+                    // And forward to success page
+                    res.redirect("/preferences");
+                },
+                //JSON response will show the newly created blob
+                json: function(){
+                    res.json(blob);
+                }
+            });
+          }
+    });*/	
+	
+    if ( typeof collectionDriver !== 'undefined' && collectionDriver )
+    {
+        collectionDriver.save(collection,value , function(err,docs) {
+            if (err) { 
+            	console.error(err);
+            	return false;
+            }
+            else { 
+
+        		if(collection === 'meteo')
+        		{	
+        			if(value["temperature"] !== 0.00 && value["humidity"] !== 0.00)
+		        	{
+		            	var data = [value["temperature"],value["humidity"]];
+		            	var ts=(new Date()).getTime();
+		            	data.unshift(ts);
+		        		
+		        		all_d.push(data);
+		        		if(all_d.length>limit) {
+		        			all_d=all_d.slice(0-limit);
+		        		}
+		        		io.sockets.emit(collection, data); 
+	        			console.log('save '+collection+' temperature:' + value["temperature"] + ',humidity:' +  value["humidity"]);
+		        	}
+          	
+        		}
+        		else
+            	{
+	            	var data = [value];
+	            	var ts=(new Date()).getTime();
+	            	data.unshift(ts);
+	        		// emit to everyone connected
+	        		io.sockets.emit(collection, data);
+	        		var jsonData = JSON.stringify(value);
+	
+            		console.log('save ' + collection.toString() + ':' +  value[""+collection]);
+            	}
+            }
+        });
+    }
+}
+/**
+//light schedule off at 6:59 am:
+cron.scheduleJob('59 6 * * *', function(){
+	if(arm)
+	{
+		var gpio = require("pi-gpio");
+		gpio.write(lightsPin, 0, function() {
+			lightsStatus = 1;
+			console.log('scheduled write light off at ' + new Date());
+		});
+	}
+	else
+	{
+		console.log('scheduled write light off at ' + new Date());
+		lightsStatus = 1;
+	}
+});
+
+
+//light schedule on at 12:59 am:
+cron.scheduleJob('59 18 * * *', function(){
+    console.log('light on at ' + new Date());
+    if(arm)
+	{
+		var gpio = require("pi-gpio");
+		gpio.write(lightsPin, 1, function() {
+			console.log('scheduled write light on at ' + new Date());
+			lightsStatus = 0;
+		});
+	}
+	else
+	{
+		lightsStatus = 0;
+		console.log('scheduled write light on at ' + new Date());
+	}    
+});
+*/
+
+process.on('SIGTERM', function() {
+    console.log("\nShutdown..");
+    if(arm)
+	{
+	    gpio.close(13, function() {
+	      // Notify the client that we sent data.
+	      //this.emitWroteEvent(socket, data);
+	      console.log('closed lights pin '+lightsPin);
+	    });
+	    gpio.close(fansPin, function() {
+	      // Notify the client that we sent data.
+	      //this.emitWroteEvent(socket, data);
+	      console.log('closed fans pin '+fansPin);
+	    });
+	}
+    console.log("Exiting...");
+    process.exit();
+});
+
+function getRandom(min, max) {
+    return min + Math.floor(Math.random() * (max - min + 1));
+}

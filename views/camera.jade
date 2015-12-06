@@ -1,0 +1,59 @@
+extends layout
+block extra_js
+  link(rel='stylesheet', href='/stylesheets/camera.css')
+  script(src='/javascripts/JSXTransformer-0.13.3.js')
+  script(src='/javascripts/react-0.13.3.js')
+  script(src='/javascripts/react-webcam.js')
+  script(type='text/jsx').
+  
+block content
+  div.container
+    script(type='text/jsx').
+      // getUserMedia only works for secure pages
+      if (!/https/.test(window.location.protocol)) window.location.protocol = 'https://';
+      var App = React.createClass({
+      getInitialState: function() {
+      return {
+      screenshot: null,
+      tab: 0
+      };
+      },
+      render: function() {
+      return (
+      <div>
+      <h1>react-webcam</h1>
+      <Webcam
+      ref='webcam'
+      />
+      <div>
+      <h2>CSS Filters</h2>
+      <div className='webcams'>
+       <Webcam width='212' height='160'/>
+       <Webcam width='212' height='160'/>
+       <Webcam width='212' height='160'/>
+       <Webcam width='212' height='160'/>
+       <Webcam width='212' height='160'/>
+       <Webcam width='212' height='160'/>
+       <Webcam width='212' height='160'/>
+       <Webcam width='212' height='160'/>
+       <Webcam width='212' height='160'/>
+      </div>
+      </div>
+      <div>
+      <h2>Screenshots</h2>
+      <div className='screenshots'>
+      <div className='controls'>
+      <button onClick={this.screenshot}>capture</button>
+      </div>
+      { this.state.screenshot ? <img src={this.state.screenshot} /> : null }
+      </div>
+      </div>
+      </div>
+      );
+      },
+      screenshot: function() {
+      var screenshot = this.refs.webcam.getScreenshot();
+      this.setState({screenshot: screenshot});
+      }
+      });
+      React.render(<App/>, document.body);

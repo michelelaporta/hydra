@@ -1,0 +1,34 @@
+     div.col-xs-4
+      #cameraDiv           
+      script(type='text/jsx').
+       // getUserMedia only works for secure pages
+       if (!/https/.test(window.location.protocol)) window.location.protocol = 'https://';
+       var App = React.createClass({
+        getInitialState: function() {
+         return {
+          screenshot: null,
+          tab: 0
+         };
+        },
+        render: function() {
+         return (
+          <div class='cameraDiv'>
+           <Webcam ref='webcam' width='212' height='160'/>
+             <div class='col-xs-3'>
+              <div className='screenshots'>
+               <div className='controls'>
+                <button onClick={this.screenshot}>capture</button>
+               </div>
+               { this.state.screenshot ? <img src={this.state.screenshot} /> : null }
+              </div>
+             </div>
+            </div>
+            );
+            },
+            screenshot: function() {
+             var screenshot = this.refs.webcam.getScreenshot();
+             this.setState({screenshot: screenshot});
+            }
+           });
+           var x = document.getElementById("cameraDiv");
+           React.render(<App/>,x);

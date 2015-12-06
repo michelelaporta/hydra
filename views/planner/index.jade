@@ -1,0 +1,26 @@
+extends ../layout
+
+block extra_js
+
+  link(rel='stylesheet', type='text/css', href='/stylesheets/fullcalendar.css')
+  link(rel='stylesheet', type='text/css', href='/stylesheets/fullcalendar.print.css', media='print')
+  link(rel='stylesheet', type='text/css', href='/stylesheets/bootstrap-fullcalendar.css')
+  script(type='text/javascript', src='/javascripts/moment.min.js')
+  script(type='text/javascript', src='/javascripts/fullcalendar.js')
+  script(type='text/javascript', src='/javascripts/planner.js')
+  
+  style.
+      #calendar {
+      max-width: 768px;
+      //max-height: 300px;
+      margin: 0 auto;
+      }
+  
+block content
+  div.container
+    #calendar
+    form#createAppointmentForm(name="createAppointmentForm",method="post",action="/planner").form-horizontal
+      button.btn(data-dismiss='modal', aria-hidden='true') Cancel
+      button#submitButton.btn.btn-primary(type='button') Save
+      
+    

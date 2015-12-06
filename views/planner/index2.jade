@@ -1,0 +1,115 @@
+extends ../layout
+block extra_js
+  link(rel='stylesheet', type='text/css', href='/stylesheets/fullcalendar.css')
+  link(rel='stylesheet', type='text/css', href='/stylesheets/fullcalendar.print.css', media='print')
+  script(type='text/javascript', src='/javascripts/fullcalendar.js')
+
+block content
+ script(type='text/javascript').
+  $(document).ready(function() {
+      var date = new Date();
+      var d = date.getDate();
+      var m = date.getMonth();
+      var y = date.getFullYear();
+      $('#calendar').fullCalendar({
+      header: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'month,agendaWeek,agendaDay'
+      },
+      editable: true,
+      selectable: true,
+      defaultView: 'agendaWeek',
+      
+      events: [
+      {
+       title: 'All Day Event',
+       start: new Date(y, m, 1)
+      },
+      {
+      title: 'Click for Google',
+      start: new Date(y, m, 28),
+      end: new Date(y, m, 29),
+      url: 'http://google.com/'
+      }
+      ],
+      select: function (start, end, allDay) {
+        endtime = $.fullCalendar.formatDate(end,'ddd, MMM d, h:mm tt');
+        starttime = $.fullCalendar.formatDate(start,'ddd, MMM d, h:mm tt');
+        console.log('select called endtime ' + endtime);
+        console.log('select called starttime ' + starttime);
+        var mywhen = starttime + ' - ' + endtime;
+        $('#createEventModal #apptStartTime').val(start);
+        $('#createEventModal #apptEndTime').val(end);
+        $('#createEventModal #apptAllDay').val(allDay);
+        $('#createEventModal #when').text(mywhen);
+        $('#createEventModal').modal('show');          
+        //$("#calendar").fullCalendar('addEventSource', [{
+        //    start: start,
+        //    end: end,
+        //    rendering: 'background',
+        //    block: true,
+        //}, ]);
+        //$("#calendar").fullCalendar("unselect");
+      },
+      selectOverlap: function(event) {
+       return ! event.block;
+      }     
+      });
+      
+      $('#submitButton').on('click', function(e){
+       // We don't want this to act as a link so cancel the link action
+       e.preventDefault();
+       doSubmit();
+      });
+
+      function doSubmit(){
+       $("#createEventModal").modal('hide');
+       console.log($('#apptStartTime').val());
+       console.log($('#apptEndTime').val());
+       console.log($('#apptAllDay').val());
+       alert("form submitted");
+       $("#calendar").fullCalendar('renderEvent',
+       {
+        title: $('#patientName').val(),
+        start: new Date($('#apptStartTime').val()),
+        end: new Date($('#apptEndTime').val()),
+        allDay: ($('#apptAllDay').val() == "true"),
+       },
+       true);
+      }
+    });
+      
+    style(type='text/css').
+      body {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 14px;
+      font-family: "Lucida Grande",Helvetica,Arial,Verdana,sans-serif;
+      }
+      #calendar {
+      width: 900px;
+      margin: 0 auto;
+      }
+    h1 #{title}
+    #calendar
+    #createEventModal.modal.hide(tabindex='-1', role='dialog', aria-labelledby='myModalLabel1', aria-hidden='true')
+      .modal-header
+        button.close(type='button', data-dismiss='modal', aria-hidden='true') x
+        h3#myModalLabel1 Create Appointment
+      .modal-body
+        form#createAppointmentForm.form-horizontal
+          .control-group
+            label.control-label(for='inputPatient') Patient:
+            .controls
+              input#patientName(type='text', name='patientName', tyle='margin: 0 auto;', data-provide='typeahead', data-items='4', data-source='["Value 1","Value 2","Value 3"]')
+              input#apptStartTime(type='hidden')
+              input#apptEndTime(type='hidden')
+              input#apptAllDay(type='hidden')
+          .control-group
+            label.control-label(for='when') When:
+            #when.controls.controls-row(style='margin-top:5px;')
+      .modal-footer
+        button.btn(data-dismiss='modal', aria-hidden='true') Cancel
+        button#submitButton.btn.btn-primary(type='submit') Save
+    

@@ -1,15 +1,7 @@
 extends layout
 block extra_js
   script(src='/javascripts/index.js')
-  // from graph
-  script(src='/javascripts/main.js')
-  //script(src='/javascripts/jsgpio-client.js')
   script(src='/javascripts/bootstrap-toggle.min.js')
-  //script(src='/javascripts/jquery.dynameter.js')
-  //link(rel='stylesheet', href='/stylesheets/jquery.dynameter.css')
-  //link(rel='stylesheet', href='/stylesheets/jumbotron-narrow.css')
-  //script(src='/javascripts/dhtmlxscheduler.js')
-  //link(rel='stylesheet', href='/stylesheets/dhtmlxscheduler.css')
   link(rel='stylesheet', href='/stylesheets/camera.css')
   script(src='/javascripts/JSXTransformer-0.13.3.js')
   script(src='/javascripts/react-0.13.3.js')
@@ -51,7 +43,7 @@ block content
         div.caption Water2
          .legendWater2Data
         div.caption Luminosity
-         .lightWaterData
+         .lightData
      div.col-xs-8
       button.btn.btn-info.start(type='button', id='', onclick='startStream()') Start Camera
       .row
@@ -59,4 +51,8 @@ block content
      div.col-xs-4
       h6#legend
       h5#update_int
+      p Update Interval
+      span#update_int_lbl
+      br
+      button.btn.btn-info.start(type='button', id='whole' onclick='getWhole()') whole period
       div#testflot|loading data

@@ -1,6 +1,18 @@
+//var timestamps = require('mongoose-timestamp');
+
 var mongoose = require('mongoose');  
-var preferencesSchema = new mongoose.Schema({  
+
+var meteoSchema = new mongoose.Schema({  
   temperature: String,
-  humidity: String
-});
-mongoose.model('meteo', preferencesSchema);
+  humidity: String,
+  date: { type: Date, default: Date.now },
+},{timestamps: true});
+
+meteoSchema.methods.findAll = function (cb) {
+  return this.model('meteo').find({}, cb);
+}
+
+var Meteo = mongoose.model('meteo', meteoSchema);
+
+module.exports = Meteo;
+

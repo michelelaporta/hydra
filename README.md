@@ -19,11 +19,12 @@ To run into RaspberryPI manually add the following dependencies to package.json:
 Add support for:
 
 nodejs modules:
-*node-dht-sensor (GPIO17)
-*pi-gpio
-*bh1750 
-*ds18x20 ( sensor of type /sys/bus/w1/devices/28-00000xxxxxxx)
-*2 channel relay(GPIO27,GPIO22)
+
+* 	node-dht-sensor (GPIO17)
+*	pi-gpio
+*	bh1750 
+*	ds18x20 ( sensor of type /sys/bus/w1/devices/28-00000xxxxxxx)
+*	2 channel relay(GPIO27,GPIO22)
 
 
 # Requirements
@@ -230,6 +231,7 @@ to 	   : "i2c": "https://github.com/polaris/node-i2c"
 Install GPIO Admin, to allow users other than root to access the GPIO:
 
 @see <https://github.com/quick2wire/quick2wire-gpio-admin>
+@see <http://www.robert-drummond.com/2013/06/06/raspberry-pi-gpio-inputoutput-in-javascript/>
 
 `gpio-admin export 22`
 
@@ -285,7 +287,7 @@ To this:
 
 To configure some parameters of the application change `utils/config.js`
 
-ds18x20 sensors are hardcoded in index.js
+ds18x20 sensors serials are hardcoded in index.js
 
 ## Start application ##
 
@@ -301,7 +303,7 @@ Navigate to your Raspberry PI IP and port to view the application http://ip:3000
 
 # Increase swap space 
 
-Apply only for build mongodb from source:
+Apply only if you are building mongodb from source:
 
 `/etc/dphys-swapfile`
  
@@ -351,3 +353,11 @@ openssl req -new -key privatekey.pem -out certrequest.csr
 openssl x509 -req -in certrequest.csr -signkey privatekey.pem -out certificate.pem
 
 Added react-camera support.
+
+# Build
+
+npm install --loglevel verbose
+
+# Sandbox
+
+Only contains experimental code..

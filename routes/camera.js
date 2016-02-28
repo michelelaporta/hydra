@@ -7,7 +7,7 @@ var express = require('express'),
 
 var express = require('express');
 var router = express.Router();
-var config = require('../utils/config');
+var config = require('../bin/config');
 
 //Any requests to this controller must pass through this 'use' function
 //Copy and pasted from method-override

@@ -5,11 +5,6 @@ var express = require('express'),
     cookieParser = require('cookie-parser'),
     bodyParser = require('body-parser');
 
-var db = require('./model/db'),
-    planner = require('./model/planner'),
-    preference = require('./model/preferences'),
-    meteo = require('./model/meteo');
-
 var routes = require('./routes/index'),
     preferences = require('./routes/preferences'),
     planner = require('./routes/planner')
@@ -26,7 +21,7 @@ app.use('/', express.static(path.join(__dirname, 'stream')));
 
 // uncomment after placing your favicon in /public
 app.use(favicon(__dirname + '/public/favicon.ico'));
-app.use(logger('dev'));
+//app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
@@ -34,11 +29,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', routes);
 //app.use('/users', users);
-app.use('/preferences', preferences);
-app.use('/planner', planner);
-app.use('/graph', graph);
-app.use('/about', about);
-app.use('/camera', camera);
+//app.use('/preferences', preferences);
+//app.use('/planner', planner);
+//app.use('/graph', graph);
+//app.use('/about', about);
+//app.use('/camera', camera);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -70,6 +65,5 @@ app.use(function(err, req, res, next) {
         error: {}
     });
 });
-
 
 module.exports = app;

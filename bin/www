@@ -12,6 +12,11 @@ var https = require('https');
 var config = require('./config');
 var moment = require("moment");
 
+var arch = process.arch;
+console.log('Arch:' + arch);
+
+var arm = process.arch === 'arm';
+
 /**
  * Get port from environment and store in Express.
  */
@@ -21,15 +26,17 @@ app.set('port', port);
 app.set('domain', '0.0.0.0');
 //https key/cert
 var options;
-if(arm)
+if(arm){
 	options = {
-	  key: fs.readFileSync('./file.pem'),
-	  cert: fs.readFileSync('./file.crt')
+	  key: fs.readFileSync('/home/pi/hydra/file.pem'),
+	  cert: fs.readFileSync('/home/pi/hydra/file.crt')
 	};
-options = {
-		  key: fs.readFileSync('./file.pem'),
-		  cert: fs.readFileSync('./file.crt')
-		};
+}else{
+	options = {
+			  key: fs.readFileSync('./file.pem'),
+			  cert: fs.readFileSync('./file.crt')
+			};
+}
 
 /**
  * Create HTTP server.
@@ -80,10 +87,6 @@ function onListening() {
 }
 
 
-var arch = process.arch;
-console.log('Arch:' + arch);
-
-var arm = process.arch === 'arm';
 var cron = require('node-schedule');
 var spawn = require('child_process').spawn;
 
@@ -103,7 +106,8 @@ var light;
 if(arm){
 	// initialize light sensor
 	BH1750 = require('./bh1750');
-	light = new BH1750();
+	if(!light)
+		light = new BH1750();
 	
 	var sensorLib = require('node-dht-sensor');
 	console.log('initializing DHT:' + config.dhtVersion + ' sensor on pin:'	+ config.dhtPin);
@@ -130,8 +134,8 @@ if(arm){
 				
 			});
 			
-			if(heatService)
-				heatService.monitor(temperatureData,humidityData);
+			if(heatservice)
+				heatservice.monitor(temperatureData,humidityData);
 
 			setTimeout(function() {
 				sensor.read();
@@ -154,25 +158,6 @@ io.sockets.on('connection', function(socket) {
 	console.log("Total clients connected : ", Object.keys(sockets).length);
 
 	socket.emit('initialization', {interval:interval, limit:limit});
-	if(lightservice)
-		lightservice.isOn(function(err,resp){
-			if(err){ 
-				console.log(err);
-			}else{
-				lightsStatus = resp;
-				socket.emit('initialization', {lights:lightsStatus});
-			}
-		});
-	
-	if(heatService)
-		heatService.isOn(function(err,resp){
-			if(err){ 
-				console.log(err);
-			}else{
-				fanStatus = resp;
-				socket.emit('initialization', {fans:fanStatus});
-			}
-		});
 	
 	mongo.findAll('meteo',function(err,response){
 		if(err) console.log(err);
@@ -183,7 +168,7 @@ io.sockets.on('connection', function(socket) {
 
 	if(meteoHistory.length > 0 ){
 		console.log('emit meteoHistory found :' + meteoHistory.length);
-		socket.emit('meteoHistory', meteoHistory);
+		socket.emit('meteoData', meteoHistory);
 	}
 	
 	socket.on('reqint', function(d) {
@@ -203,7 +188,7 @@ io.sockets.on('connection', function(socket) {
 			//socket.emit('meteoHistory', response);
 			console.log('findAll meteo:' + response.length);
 			meteoHistory = response;
-			socket.broadcast.emit('meteoData', response);
+			socket.broadcast.emit('meteoHistory', response);
 		});
 
 		
@@ -247,14 +232,14 @@ io.sockets.on('connection', function(socket) {
 		if(arm){
 			var gpio = require("pi-gpio");
 			if(d.status){
-				heatService.on();
+				heatservice.on();
 			}else{
-				heatService.off();
+				heatservice.off();
 			}					
 		}
 	});
 	
-	socket.on('start-stream', function() {
+	socket.on('startStream', function() {
 	    startStreaming(io);
 	  });	
 });
@@ -268,6 +253,28 @@ io.sockets.on('connection', function(socket) {
 // |  |  |  |  |
 //t *  *  *  *  *  command to be executed
 cron.scheduleJob('*/1 * * * *', function(){
+
+	if(lightservice){
+		lightservice.isOn(function(err,resp){
+			if(err){ 
+				console.log(err);
+			}else{
+				lightsStatus = resp;
+				io.sockets.emit('initLights', {lights:lightsStatus});
+			}
+		});
+	}
+	
+	if(heatservice){
+		heatservice.isOn(function(err,resp){
+			if(err){ 
+				console.log(err);
+			}else{
+				fanStatus = resp;
+				io.sockets.emit('initFans', {fans:fanStatus});
+			}
+		});
+	}
 	if(arm){
 		
 		// TODO use config.ds18x20 address 
@@ -298,11 +305,13 @@ cron.scheduleJob('*/1 * * * *', function(){
 	}
 	else
 	{	
-		mongo.create('meteo',{temperature:getRandom(19, 30).toFixed(2),humidity:getRandom(40, 80).toFixed(2)},function(err,response){
+		var t = getRandom(19, 22).toFixed(2);
+		var h = getRandom(65, 75).toFixed(2);
+		mongo.create('meteo',{temperature:t,humidity:h},function(err,response){
 			if(err) console.log(err);
 		    //meteoHistory.push(response);
     		io.sockets.emit('meteoData', response); 
-    		heatService.monitor(t,h);
+    		heatservice.monitor(t,h);
 		});
 
 		mongo.create('water',{water: getRandom(18, 25).toFixed(2)},function(err,response){
@@ -325,7 +334,7 @@ process.on('SIGTERM', function() {
     if(arm)
 	{
     	lightservice.stop();
-    	heatService.stop();
+    	heatservice.stop();
 	}
     console.log("Exiting...");
     process.exit();
@@ -368,7 +377,7 @@ function stopStreaming() {
 }
 
 function startStreaming(io) {
-
+  console.log('startStreaming CALLED');	
   if (app.get('watchingFile')) {
     io.sockets.emit('liveStream', 'image_stream.jpg?_t=' + (Math.random() * 100000));
     return;
@@ -399,7 +408,7 @@ function startStreaming(io) {
 var lightservice = require('./lightservice');
 lightservice.start();
 
-var heatService = require('./heatservice');
-heatService.start();
+var heatservice = require('./heatservice');
+heatservice.start();
 
 var tprobeSensor = require('./ds18x20');

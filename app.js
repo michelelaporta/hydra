@@ -3,16 +3,26 @@ var express = require('express'),
     favicon = require('serve-favicon'),
     logger = require('morgan'),
     cookieParser = require('cookie-parser'),
-    bodyParser = require('body-parser');
+    bodyParser = require('body-parser'),
+    session = require('express-session');
 
 var routes = require('./routes/index'),
     preferences = require('./routes/preferences'),
     planner = require('./routes/planner')
     graph = require('./routes/graph'),
     about = require('./routes/about'),
-    camera = require('./routes/camera');
+    camera = require('./routes/camera'),
+    login = require('./routes/login');
 
 var app = express();
+
+//Basic Authentication
+//var auth = require('basic-auth');
+//var basicAuth = require('basic-auth-connect');
+//app.use(basicAuth('hydra', 'ducati600'));
+app.use(session({secret: 'hydra'}));
+
+
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -28,6 +38,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', routes);
+app.use('/login', login);
 //app.use('/users', users);
 //app.use('/preferences', preferences);
 //app.use('/planner', planner);

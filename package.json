@@ -12,6 +12,7 @@
     "debug": "~2.2.0",
     "ds18x20": "^0.2.0",
     "express": "~4.11.1",
+    "express-session": "^1.13.0",
     "jade": "~1.9.1",
     "liquid-pid": "^1.0.0",
     "lodash": "^3.10.1",

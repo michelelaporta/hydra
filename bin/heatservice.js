@@ -1,3 +1,5 @@
+require('events').EventEmitter.prototype._maxListeners = 0;
+
 if(process.arch === 'arm')var gpio = require("pi-gpio");
 var PID = require('awesome-pid');
 var moment = require("moment");
@@ -7,24 +9,37 @@ var cron = require('node-schedule');
 var fs = require('fs');
 var now = moment();
 var lastT,lastH;
-var targetT = 22.00;
 var airExchangeNumber= config.airExchangeNumber;
 var  flowCapacity = config.flowCapacity;
 
-var targetValue = config.targetTemperature;
+var targetTemperature = config.targetTemperature;
 
-var options = {
+var targetHumidity = config.targetHumidity;
+
+var tempOptions = {
   kp: 500,
   ki: 200,
   kd: 0,
-  dt: 1000,  // milliseconds
-  initial: targetValue,
-  target: targetValue,
+  dt: 10000,  // milliseconds
+  initial: targetTemperature,
+  target: targetTemperature,
   u_bound: 1,
   l_bound: -1
 }
 
+var humidityOptions = {
+		  kp: 500,
+		  ki: 200,
+		  kd: 0,
+		  dt: 10000,  // milliseconds
+		  initial: targetHumidity,
+		  target: targetHumidity,
+		  u_bound: 1,
+		  l_bound: -1
+		}
+
 var tempPID;
+var humidityPID;
 
 exports.start = function start(){
 	console.log('start heat service@ ' + now.format() );
@@ -37,38 +52,73 @@ exports.start = function start(){
 }
 
 exports.monitor = function monitor(temperature,humidity){
-	var currentValue ;
-	if(process.arch === 'arm')
-		currentValue = temperature;
-	else
-		currentValue = getRandom(18, 25).toFixed(2);
-		
+	var currentTemperature ;
+	var currentHumidity;
+	
+	if(process.arch === 'arm'){
+		currentTemperature = temperature;
+		currentHumidity = humidity;
+	}else{
+		currentTemperature = getRandom(18, 25).toFixed(2);
+		currentHumidity = getRandom(40, 80).toFixed(2);
+	}
 	if(!tempPID)
-		tempPID = new PID(options);
+		tempPID = new PID(tempOptions);
 
+	tempOptions.initial = currentTemperature;
+	
 	tempPID.startLoop();
 
 	// Will be emitted every dt milliseconds
 	tempPID.on("output", function(output) {
-	  currentValue += parseInt(output);
-	  var val = parseInt(currentValue);
+		currentTemperature += parseInt(output);
+	  var val = parseInt(currentTemperature);
 	  
-	  this.setInput(currentValue);
+	  this.setInput(currentTemperature);
 
-	  if (val === targetValue ) {
+	  if (val === targetTemperature ) {
 		  //console.log('temp ok');
-		  internalOff();
-	  }else if(val > targetValue ){
-		  //console.log('temperature up on() currentValue:' + currentValue+ ' val:'+val);
+		  console.log('OK currentTemperature['+val+'] targetTemperature['+targetTemperature+']');
 		  internalOn();
-		  
-	  }else if(val > targetValue ){
-		  //console.log('temperature down off() currentValue:' + currentValue + ' val:'+val);
+	  }else if(val > targetTemperature ){
+		  console.log('UP currentTemperature['+val+'] targetTemperature['+targetTemperature+']');
 		  internalOff();
+	  }else if(val < targetTemperature ){
+		  //console.log('temperature down off() currentValue:' + currentValue + ' val:'+val);
+		  console.log('DOWN currentTemperature['+val+'] targetTemperature['+targetTemperature+']');
+		  internalOn();
 	  }
 	  tempPID.stopLoop();
 	});	
 	
+	if(!humidityPID)
+		humidityPID = new PID(humidityOptions);
+
+	humidityOptions.initial = currentHumidity;
+	
+	humidityPID.startLoop();
+
+	// Will be emitted every dt milliseconds
+	humidityPID.on("output", function(output) {
+	  currentHumidity += parseInt(output);
+	  var val = parseInt(currentHumidity);
+	  
+	  this.setInput(currentHumidity);
+
+	  if (val === targetHumidity ) {
+		  console.log('OK currentHumidity['+val+'] targetHumidity['+targetHumidity+']');
+		  internalOff();
+	  }else if(val > targetHumidity ){
+		  //console.log('temperature up on() currentValue:' + currentValue+ ' val:'+val);
+		  console.log('UP currentHumidity['+val+'] targetHumidity['+targetHumidity+']');
+		  internalOn();
+	  }else if(val < targetHumidity ){
+		  //console.log('temperature down off() currentValue:' + currentValue + ' val:'+val);
+		  console.log('DOWN currentHumidity['+val+'] targetHumidity['+targetHumidity+']');
+		  internalOff();
+	  }
+	  humidityPID.stopLoop();
+	});		
 }
 
 exports.stop = function stop()
@@ -133,11 +183,12 @@ exports.isOn = function isOn(callback)
 			return callback(null,s);
 		});
 	else
-		fs.readFile("/sys/devices/virtual/thermal/thermal_zone0/temp", "utf8", function(err, value) {
-			if(err) console.log(err);
-			console.log(value);
-			return value;
-		});
+		return callback(null,!(Math.random()+.5|0));
+//		fs.readFile("/sys/devices/virtual/thermal/thermal_zone0/temp", "utf8", function(err, value) {
+//			if(err) console.log(err);
+//			console.log(value);
+//			return callback(null,!(Math.random()+.5|0));
+//		});
 }
 
 function getRandom(min, max) {

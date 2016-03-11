@@ -1,15 +1,14 @@
 The idea
 
-Control your hydroponics green house using a Raspberry PI via the Browser using NodeJS, Socket.IO and pi-gpio MongoDB.
+Control your hydroponics green house using a Raspberry PI via the Browser using NodeJS, Socket.IO and pi-gpio, MongoDB.
 
-USE AT YOUR OWN RISK wrong connections can cause damage to your RaspberryPI.
+USE AT YOUR OWN RISK wrong wires connections can cause damage to your RaspberryPI.
 
 # Arm vs x86
 
 In order to develop there a flag for arm vs x86
 
-To run into RaspberryPI manually add the following dependencies to package.json:
-
+To run into RaspberryPI manually add the following dependencies to package.json (if not present):
 
     "node-dht-sensor": "0.0.8",
     "i2c": "https://github.com/polaris/node-i2c"
@@ -21,8 +20,8 @@ Add support for:
 nodejs modules:
 
 * 	node-dht-sensor (GPIO17)
-*	pi-gpio
-*	bh1750 
+*	pi-gpio ( fans,lights management)
+*	bh1750  ( light sensor
 *	ds18x20 ( sensor of type /sys/bus/w1/devices/28-00000xxxxxxx)
 *	2 channel relay(GPIO27,GPIO22)
 
@@ -187,7 +186,7 @@ To scan for WiFi networks, use the command:
 
 add a generated encrypted password:
 
-`sudo vi wpa_passphrase WIRELESS_SID password`
+`sudo wpa_passphrase WIRELESS_SID password`
 
  to /etc/wpa_supplicant/wpa_supplicant.conf:
 

@@ -28,13 +28,13 @@ exports.start = function start(){
 			if (on.diff(now) < 0) {
 				gpio.setDirection(pin,'output', function(err, value) {
 					if(err) console.log(err);
-					console.log('turn lights ON ' + value);
+					console.log('turn lights ON');
 				});
 	
 			} else {
 				gpio.setDirection(pin,'input', function(err, value) {
 					if(err) console.log(err);
-					console.log('turn lights OFF ' + value);
+					console.log('turn lights OFF');
 				});
 			}
 		});	
@@ -53,7 +53,7 @@ exports.start = function start(){
 		if(process.arch === 'arm')
 			gpio.setDirection(pin,'output', function(err, value) {
 			    if(err) console.log(err);
-			    console.log('scheduled light on@' + on.format() + ' value ' +value);
+			    console.log('scheduled light on@' + on.format());
 			});
 	});
 
@@ -61,7 +61,7 @@ exports.start = function start(){
 		if(process.arch === 'arm')
 			gpio.setDirection(pin,'input', function(err, value) {
 			    if(err)	console.log(err);
-			    console.log('scheduled off@' + off.format() + ' value ' +value);
+			    console.log('scheduled off@' + off.format());
 
 			});
 	});	
@@ -110,11 +110,15 @@ exports.isOn = function isOn(callback)
 		});
 	}
 	else{
-		fs.readFile("/sys/devices/virtual/thermal/thermal_zone0/temp", "utf8", function(err, value) {
-			if(err) console.log(err);
-			console.log('light isOn '+ value);
-			return value;
-		});
+		return callback(null,!(Math.random()+.5|0));
+//		fs.readFile("/sys/devices/virtual/thermal/thermal_zone0/temp", "utf8", function(err, value) {
+//			if(err){
+//				console.log(err);
+//				return callback(err,null);
+//			}
+//			console.log('light isOn '+ value);
+//			return callback(null,!(Math.random()+.5|0));
+//		});
 	}
 }
 

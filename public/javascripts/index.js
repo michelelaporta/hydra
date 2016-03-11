@@ -48,7 +48,13 @@ socket.on('initialization', function(v) {
 	}
 	if(v.limit)
 		limit=v.limit;
+});
+
+socket.on('initLights', function(v) {
 	
+	lights = $('[data-toggle="lights-toggle"]').parent();
+
+	console.log('lights:'+lights+' initLights ' +v.lights);
 	if(v.lights){
 		lights.removeClass('toggle btn btn-default off') ;
 		lights.addClass('toggle btn btn-default on') ;
@@ -56,7 +62,12 @@ socket.on('initialization', function(v) {
 		lights.removeClass('toggle btn btn-default on') ;
 		lights.addClass('toggle btn btn-default off') ;
 	}
+});
+
+socket.on('initFans', function(v) {
 	
+	fans = $('[data-toggle="fans-toggle"]').parent();
+	console.log('initFans ' +v.fans);
 	if(v.fans){
 		fans.removeClass('toggle btn btn-default off') ;
 		fans.addClass('toggle btn btn-default on') ;
@@ -65,17 +76,6 @@ socket.on('initialization', function(v) {
 		fans.removeClass('toggle btn btn-default on') ;
 		fans.addClass('toggle btn btn-default off') ;
 	}
-	
-//	var mode = $('[data-toggle="mode-toggle"]').parent();
-//	mode.removeClass('toggle btn btn-default off') ;
-//	mode.addClass('toggle btn btn-default on') ;
-
-//	var lights = $('[data-toggle="lights-toggle"]').parent();
-//	var fans = $('[data-toggle="fans-toggle"]').parent();
-//	$('#lights').bootstrapSwitch('toggleDisabled');
-//	$('#fans').bootstrapSwitch('toggleDisabled');
-//	$('#lights').bootstrapToggle('disable');
-//	$('#fans').bootstrapToggle('disable');
 });
 
 socket.on('meteoHistory', function(data) {
@@ -105,6 +105,7 @@ socket.on('meteoHistory', function(data) {
 });
 
 socket.on('meteoData', function(data) {
+	
 	var currentDate = new Date(data.createdAt);
 	var ts=currentDate.getTime() -zone_delta;
 	console.log('got meteoData currentDate ' + currentDate + ' ts ' + ts);
@@ -253,8 +254,21 @@ $(function() {
 
 function getWhole() {
 	console.log('getWhole');
-	socket.emit('onHistory');
+	
 	socket.emit('onHistory', 'all');
 
 	$('.whole').hide();
+}
+
+socket.on('liveStream', function(url) {
+	  console.log('on liveStream');
+  $('#stream').attr('src', url);
+  $('.start').hide();
+});
+
+function startStream() {
+	socket.emit('startStream');
+	//$('.start').hide();
+	console.log('startStream emitted');
+	
 }

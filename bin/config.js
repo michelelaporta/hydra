@@ -1,24 +1,34 @@
 var config={
-	version:"0.0.1-alpha",
-	bindAddress:"0.0.0.0",
+	author: 'Anonymous',	
+	version:'0.0.1-alpha',
+	bindAddress:'0.0.0.0',
 	bindPort:8000,
-	mongoHost:"localhost",
+	mongoHost:'localhost',
 	mongoPort:27017,
 	interval:60,//sec
+	bh1750Enable:false,
+	probeSensorEnable:true,
 	//limit:1440,
-	limit:200,
+	limit:10,
 	dhtVersion:22,
-	dhtPin: 17,
-	dhtTimeout:300000,// 5mins
-	lightsPin: 12,
-	fansPin: 15,
+	dhtPin: 24,
+	dhtTimeout:30000,// 5mins
+	lightsPin: 11,
+	fansPin: 13,
 	lightsOn:{hour:'18',minute:'59'},
 	lightsOff:{hour:'12',minute:'59'},
 	isVeg: true,
-	airExchangeNumber:70,
-	flowCapacity: 105,
-	targetTemperature:25,
-	targetHumidity:40
+	targetHumidity:40,
+	"relay1":{"pin":11,"gpio":17},
+	"relay2":{"pin":13,"gpio":27,enable:false,airExchangeNumber:70,flowCapacity: 145},
+	"relay3":{"pin":15,"gpio":22,targetTemperature:25},
+	"relay4":{"pin":19,"gpio":10},
+	"relay5":{"pin":21,"gpio":09},
+	"relay6":{"pin":23,"gpio":11},
+	"relay7":{"pin":12,"gpio":18},
+	"relay8":{"pin":16,"gpio":23},
+	
+	
 };
 
 module.exports=config;

@@ -63,21 +63,24 @@ Installing Kernel Support (with Raspi-Config)
 `raspi-config -> advanced -> enable i2c`
 
 
-sudo vi /etc/modules
+`sudo vi /etc/modules`
+
 add these two lines to the end of the file:
 
 `i2c-bcm2708`
 
 `i2c-dev`
 
-sudo vi /etc/modprobe.d/raspi-blacklist.conf
+`sudo vi /etc/modprobe.d/raspi-blacklist.conf`
+
 add these two lines to the end of the file:
 
 `#blacklist spi-bcm2708`
 
 `#blacklist i2c-bcm2708`
 
-sudo vi /boot/config.txt
+`sudo vi /boot/config.txt`
+
 add these two lines to the end of the file:
 
 `dtparam=i2c1=on`
@@ -89,6 +92,7 @@ add these two lines to the end of the file:
 check i2c installation:
 
 `sudo i2cdetect -y 1`
+
 `     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f`
 
 `00:          -- -- -- -- -- -- -- -- -- -- -- -- -- `
@@ -211,8 +215,11 @@ add a generated encrypted password:
 #Install node.js 
 
 `curl -sLS https://apt.adafruit.com/add | sudo bash`
+
 `sudo apt-get install node`
+
 `pi@raspberrypi ~ $ node -v`
+
 `v4.2.1`
 
 ##NODEJS I2C
@@ -230,6 +237,7 @@ to 	   : "i2c": "https://github.com/polaris/node-i2c"
 Install GPIO Admin, to allow users other than root to access the GPIO:
 
 @see <https://github.com/quick2wire/quick2wire-gpio-admin>
+
 @see <http://www.robert-drummond.com/2013/06/06/raspberry-pi-gpio-inputoutput-in-javascript/>
 
 `gpio-admin export 22`
@@ -251,17 +259,6 @@ To this:
 `make`
 
 `sudo make install` 
-
-Open and modify the pi-gpio.js file:
-
-Change this:
-
-`sysFsPath = "/sys/devices/virtual/gpio";`
-
-To this:
-
-`sysFsPath = "/sys/class/gpio";`
-
 
 # BCM2835
 
@@ -298,7 +295,7 @@ To start the application, issue:
 
 `tail -f hydra.log`
 
-Navigate to your Raspberry PI IP and port to view the application http://ip:3000
+Navigate to your Raspberry PI IP and port to view the application https://ip:4443/login
 
 # Increase swap space 
 
@@ -330,7 +327,6 @@ start.sh - Provides a basic shell script to gracefully stop the nodejs applicati
 
 Added support for https.
 
-
 	var options = {
      key: fs.readFileSync('file.pem'),
      cert: fs.readFileSync('file.crt')
@@ -339,17 +335,21 @@ Added support for https.
 
 Where /path/to/file.pem is the path to a file containing an RSA key, generated (for example) by:
 
-$ openssl genrsa 1024 > /path/to/file.pem
+`openssl genrsa 1024 > /path/to/file.pem`
+
 and /path/to/file.crt is the path to a file containing an SSL certificate, generated (for example) by:
 
-$ openssl req -new -key /path/to/file.pem -out csr.pem
-$ openssl x509 -req -days 365 -in csr.pem -signkey /path/to/file.pem -out /path/to/file.crt
+`openssl req -new -key /path/to/file.pem -out csr.pem`
+
+`openssl x509 -req -days 365 -in csr.pem -signkey /path/to/file.pem -out /path/to/file.crt`
 
 Generate the privatekey.pem and certificate.pem files using the following commands:
 
-openssl genrsa -out privatekey.pem 1024 
-openssl req -new -key privatekey.pem -out certrequest.csr 
-openssl x509 -req -in certrequest.csr -signkey privatekey.pem -out certificate.pem
+`openssl genrsa -out privatekey.pem 1024`
+
+`openssl req -new -key privatekey.pem -out certrequest.csr`
+
+`openssl x509 -req -in certrequest.csr -signkey privatekey.pem -out certificate.pem`
 
 Added react-camera support.
 

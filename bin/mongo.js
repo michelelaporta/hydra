@@ -1,6 +1,5 @@
 var mongoose = require('mongoose');
 mongoose.connect('mongodb://localhost/hydra');
-
 var db = mongoose.connection;
 
 db.on('error', console.error);
@@ -20,7 +19,7 @@ var
 	preferences = require('../model/preferences'),
 	water = require('../model/water'),
 	water2 = require('../model/water2');
-;
+	//userInfo = require('../model/userInfo');
 
 exports.create = function create(collection,data,callback)
 {
@@ -46,7 +45,7 @@ exports.findAll = function findAll(collection,callback)
 		if (err) {
       	  console.log('There was a problem retrieve data for '+collection+' from mongo.Error ' + err);
       	  if( Object.prototype.toString.call(data) === '[object Array]' ) {
-      		console.log('GOT ARRAY>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><');
+      		console.log('GOT ARRAY>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
       	  }
       	  return callback(err,data);
         } else {
@@ -55,4 +54,23 @@ exports.findAll = function findAll(collection,callback)
 	});
 
 }
+/**
+exports.findUser = function findUser(collection,username,password,callback)
+{
+	var m = mongoose.model(collection);
+	var s = m.schema;
+	
+	var T = mongoose.model(collection, s);
+	var t = new T({});
+
+	t.findUser(username,password, function (err, data) {
+        if (err) {
+      	  console.log('mongo findUser error ' + err);
+      	  return callback(err,data);
+        } else {
+        	  console.log('mongo found findUser <' + data+'>');
+      	  return callback(null,data);
+        }
+	});	
+}*/
 

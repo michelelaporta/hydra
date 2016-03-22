@@ -1,4 +1,6 @@
 var socket=io.connect();
+
+
 var d1=[], d5=[], d15=[];
 var zone_delta=(new Date()).getTimezoneOffset()*60000;// time diff in ms
 var interval=60,limit=200; // show 2 hours data (7200/5) at interval=5sec
@@ -8,12 +10,14 @@ var temperature = [];
 var humidity = [];
 var lights;
 var fans;
+var cpu;
 
 $(function() {
 	console.log('init bootstrapToggle()');
     $('#fans').bootstrapToggle();
     $('#lights').bootstrapToggle();
     $('#mode').bootstrapToggle();
+    /**
 	$('#update_int').slider( {
 		min:5,
 		max:30,
@@ -25,11 +29,11 @@ $(function() {
 			socket.emit('reqint', ui.value);
 		}
 	});
+	*/
 	lights = $('[data-toggle="lights-toggle"]').parent();
 	fans = $('[data-toggle="fans-toggle"]').parent();
+	
 });
-
-
 
 socket.on('setint', function(v) {
 	if (!isNaN(v)) {
@@ -105,15 +109,26 @@ socket.on('meteoHistory', function(data) {
 });
 
 socket.on('meteoData', function(data) {
-	
-	var currentDate = new Date(data.createdAt);
-	var ts=currentDate.getTime() -zone_delta;
-	console.log('got meteoData currentDate ' + currentDate + ' ts ' + ts);
 
-	temperature.push([ts, data.temperature]);	
-	humidity.push([ts, data.humidity]);	
-	meteoData.push([ts,data]);
-	$('.legend').html('<p><strong>Temp:</strong> '+data.temperature+'</p><p><strong>Hum:</strong> '+ data.humidity);
+	var  dataArray = [];
+
+	if ( $.isArray( data ) ) {
+		dataArray = data;
+	}else{
+		console.log('single data element ' + data);
+		dataArray.push(data);
+	}
+	
+	for(var i = 0 ; i < dataArray.length ;i++){
+		var currentDate = new Date(dataArray[i].createdAt);
+		var ts=currentDate.getTime() -zone_delta;
+		temperature.push([ts, dataArray[i].temperature]);	
+		humidity.push([ts, dataArray[i].humidity]);	
+		meteoData.push([ts,dataArray[i]]);
+
+	}
+	$('.legendTemp').html('<p><strong>Temp:</strong> '+dataArray[dataArray.length-1].temperature+'</p>');
+	$('.legendHum').html('<p><strong> Hum:</strong> '+ dataArray[dataArray.length-1].humidity+'</p>');
 	rePlotMeteo();
 });
 
@@ -129,7 +144,12 @@ socket.on('water2Data', function(v) {
 
 socket.on('lightData', function(v) {
 	console.log('light data ' +v.light);
-	$('.lightData').html('<p><strong>Luminosity:</strong> '+v.light);
+	$('.lightData').html('<p><strong>Lumen</strong> '+v.light);
+});
+
+socket.on('cpuData', function(response,response2) {
+	console.log('cpu temp ' +response + ' ' + response2);
+	$('.cpuData').html('<p><strong>Temp:</strong> '+response2);
 });
 
 function rePlotMeteo() {
@@ -140,45 +160,31 @@ function rePlotMeteo() {
 	
 	// slice arrays if len>limit
 	if(meteoData.length>limit) {
-		console.log('temperature.length:'+temperature.length);
 		temperature=temperature.slice(0-limit);
-		console.log('temperature.length:'+temperature.length);
-		console.log('humidity.length:'+humidity.length);
 		humidity=humidity.slice(0-limit);
-		console.log('humidity.length:'+humidity.length);
-		
-		console.log('meteoData.length:'+meteoData.length);
 		meteoData = meteoData.slice(0-limit);
-		console.log('meteoData.length:'+meteoData.length);
 	}
-	meteoDataLen =meteoData.length;
+	meteoDataLen = meteoData.length;
 	
-	var fTP = new Date().getTime();
-//	console.log('FIRST meteoData ELEMENT ' + meteoData[0]);
-	if (!isNaN(meteoData[0])) {
-		var firstTimeStamp = meteoData[0];
-		console.log('firstTimeStamp ' + firstTimeStamp);
-		fTP = firstTimeStamp[0];
-		
+	var now = new Date().getTime();
+	if (!isNaN(meteoData[0][0])) {
+		var firstTimeStamp = meteoData[0][0];
+		now = firstTimeStamp;
 	}
 	
 	var lastTimeStamp = meteoData[meteoDataLen-1][0];
+	var tick_int = Math.round( (lastTimeStamp-now)/5000);
 	
-	console.log('firstTimeStamp ' + fTP);
-	console.log('lastTimeStamp ' + lastTimeStamp);
+	console.log('temperature array ' + temperature.length);
+	console.log('humidity array ' + humidity.length);
 	
-	var tick_int = Math.round( (lastTimeStamp-fTP)/5000);
-	
-	console.log('tick_int ' + tick_int);
-	
-	var d=[
+	var series=[
 		{ data: temperature, label:'last 1 min load'},
 		{ data: humidity, label:'last 5 min load'}
 	];
 	
-	$.plot(
-		$('#testflot'), 
-		d,
+	$.plot($('#testflot'), 
+			series,
 		{
 			xaxis:{
 			 mode:'time', 
@@ -186,7 +192,7 @@ function rePlotMeteo() {
 			 tickSize:[tick_int, "second"],
 			 twelveHourClock: true
 			},
-			legend: { container: $('#legend') }
+			legend: { container: $('#plotLegend') }
 		}
 	);
 }
@@ -209,32 +215,12 @@ $(function() {
 	$("#whole").change(function () {
 		console.log('whole temperature:' +temperature.length + ' humidity:' + humidity.length );
 		
-/**
-		var fTP = new Date().getTime();
-//		console.log('FIRST meteoData ELEMENT ' + meteoData[0]);
-		if (!isNaN(meteoData[0])) {
-			var firstTimeStamp = meteoData[0];
-			console.log('firstTimeStamp ' + firstTimeStamp);
-			fTP = firstTimeStamp[0];
-			
-		}
-		
-		var lastTimeStamp = meteoData[meteoDataLen-1][0];
-		
-		console.log('firstTimeStamp ' + fTP);
-		console.log('lastTimeStamp ' + lastTimeStamp);
-		
-		var tick_int = Math.round( (lastTimeStamp-fTP)/60000);
-		*/
 		var tick_int = 6000;
 		
 		var d=[
 				{ data: temperature, label:'last 1 min load'},
 				{ data: humidity, label:'last 5 min load'}
 			];
-//		$.plot("#placeholder", [d], {
-//			xaxis: { mode: "time" }
-//		});
 		$.plot(
 			$('#testflot'), 
 			d,
@@ -245,7 +231,7 @@ $(function() {
 				 tickSize:[tick_int, "second"],
 				 twelveHourClock: true
 				},
-				legend: { container: $('#legend') }
+				legend: { container: $('#plotLegend') }
 			}
 		);		
 	});
@@ -254,21 +240,24 @@ $(function() {
 
 function getWhole() {
 	console.log('getWhole');
-	
 	socket.emit('onHistory', 'all');
-
 	$('.whole').hide();
 }
 
 socket.on('liveStream', function(url) {
-	  console.log('on liveStream');
+	  console.log('on liveStream ' + url);
   $('#stream').attr('src', url);
-  $('.start').hide();
 });
 
-function startStream() {
-	socket.emit('startStream');
-	//$('.start').hide();
-	console.log('startStream emitted');
-	
+function takeSnapshot() {
+//	var value = $('.start').html();
+	socket.emit('takeSnapshot');
+//	if(value == 'Start Camera'){
+//		socket.emit('startStream');
+//		$('.start').html('Stop Camera');
+//	}else{
+//		socket.emit('stopStreaming');
+//		$('.start').html('Start Camera');
+//		
+//	}
 }

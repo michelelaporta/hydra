@@ -1,11 +1,8 @@
 var express = require('express');
 var router = express.Router();
 
-//var session;
-
-/* GET home page. */
+/* GET index page. */
 router.get('/', function(req, res, next) {
-	//session=req.session;
   res.render('index', { title: 'Hydra Home' });
 });
 

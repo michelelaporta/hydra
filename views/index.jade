@@ -8,51 +8,70 @@ block extra_js
   script(src='/javascripts/react-webcam.js')
   
 block content
-  div.container
+  div.container-fluid
     div.row
-     div.col-xs-2
-      .panel.panel-default
+     div.col-xs-1
+      .panel.panel-primary
        .panel-heading Auto
        .panel-body 
         .checkbox
          label
           input#mode(type='checkbox', data-toggle='mode-toggle')
-     div.col-xs-2
-      .panel.panel-default
+     div.col-xs-1
+      .panel.panel-primary
        .panel-heading Lights
        .panel-body 
         .checkbox
          label
           input#lights(type='checkbox', data-toggle='lights-toggle')
-     div.col-xs-2
-      .panel.panel-default
+     div.col-xs-1
+      .panel.panel-primary
        .panel-heading Fans
        .panel-body 
         .checkbox
          label
           input#fans(type='checkbox', data-toggle='fans-toggle')
+     div.col-xs-1
+      .panel.panel-primary
+       .panel-heading Dht
+       .panel-body
+        .legendTemp 
+     div.col-xs-1
+      .panel.panel-primary
+       .panel-heading Dht
+       .panel-body
+        .legendHum 
+     div.col-xs-1
+      .panel.panel-primary
+       .panel-heading Water
+       .panel-body
+        .legendWaterData
+     div.col-xs-1
+      .panel.panel-primary
+       .panel-heading Water2
+       .panel-body
+        .legendWater2Data
+     div.col-xs-1
+      .panel.panel-primary
+       .panel-heading Lux
+       .panel-body
+        .lightData
+     div.col-xs-1
+      .panel.panel-primary
+       .panel-heading Cpu
+       .panel-body
+        .cpuData
+     div.col-xs-1
+      button.btn.btn-info.start(type='button', id='whole' onclick='getWhole()') whole period
+     div.col-sm-1
+      button.btn.btn-info.start(type='button', id='', onclick='takeSnapshot()') Snapshot
+     div.col-xs-1
+      img(height='200', width='200')#stream
     div.row
      div.col-xs-2
-      .panel.panel-default
-       .panel-heading Sensors
-       .panel-body
-        div.caption Indoor
-         .legend
-        div.caption Water
-         .legendWaterData
-        div.caption Water2
-         .legendWater2Data
-        div.caption Luminosity
-         .lightData
-     div.col-xs-8
-      button.btn.btn-info.start(type='button', id='', onclick='startStream()') Start Camera
-      .row
-       img#stream
-     div.col-xs-4
-      h6#legend
+      h6#plotLegend
       h5#update_int
-      p Update Interval
+      h6 Update Interval
       span#update_int_lbl
-      br
-      button.btn.btn-info.start(type='button', id='whole' onclick='getWhole()') whole period
+     div.col-xs-8
       div#testflot|loading data

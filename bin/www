@@ -33,9 +33,9 @@ if(arm){
 	};
 }else{
 	options = {
-			  key: fs.readFileSync('./file.pem'),
-			  cert: fs.readFileSync('./file.crt')
-			};
+	  key: fs.readFileSync('./file.pem'),
+	  cert: fs.readFileSync('./file.crt')
+	};
 }
 
 /**
@@ -93,6 +93,8 @@ var spawn = require('child_process').spawn;
 //use all_d to hold config.limit number of data sets for initial connections
 var limit=config.limit, interval=config.interval, all_d=[];
 
+var bh1750Enable = config.bh1750Enable;
+var probeSensorEnable = config.probeSensorEnable;
 var meteoHistory = [];
 
 var lightsStatus = false;
@@ -104,23 +106,27 @@ var BH1750;
 var light;
 
 if(arm){
-	// initialize light sensor
-	BH1750 = require('./bh1750');
-	if(!light)
-		light = new BH1750();
+	
+	if(bh1750Enable){
+		// initialize light sensor
+		BH1750 = require('./bh1750');
+		if(!light)
+			light = new BH1750();
+	}
 	
 	var sensorLib = require('node-dht-sensor');
-	console.log('initializing DHT:' + config.dhtVersion + ' sensor on pin:'	+ config.dhtPin);
 
 	var sensor = {
 		initialize : function() {
-			return sensorLib.initialize(config.dhtVersion, config.dhtPin);
+			var dhtSensor = sensorLib.initialize(config.dhtVersion, config.dhtPin);
+			console.log('initializing DHT:' + config.dhtVersion + ' sensor on pin:'	+ config.dhtPin);
+			return dhtSensor;
 		},
 		read : function() {
 			var readout = sensorLib.read();
 			var temperatureData = readout.temperature.toFixed(2);
 			var humidityData = readout.humidity.toFixed(2);
-			//console.log(moment().format() + ' TEMP: ' +temperatureData + ' HUMD: ' +humidityData);
+			console.log('DHT TEMP: ' +temperatureData + ' HUMD: ' +humidityData + ' @'+moment().format());
 			
 			var meteoData = {
 				temperature : temperatureData,
@@ -134,12 +140,9 @@ if(arm){
 				
 			});
 			
-			if(heatservice)
-				heatservice.monitor(temperatureData,humidityData);
-
 			setTimeout(function() {
 				sensor.read();
-			}, config.dhtTimeout);// 10min
+			}, config.dhtTimeout);
 		}
 	};
 
@@ -152,27 +155,28 @@ if(arm){
 
 var sockets = {};
 
+var cpuMonitor = require('./service/cpu');
+cpuMonitor.emitInternalTemperature(io.sockets);
+
 io.sockets.on('connection', function(socket) {
 	
 	sockets[socket.id] = socket;
-	console.log("Total clients connected : ", Object.keys(sockets).length);
-
+	
 	socket.emit('initialization', {interval:interval, limit:limit});
 	
+	/**
 	mongo.findAll('meteo',function(err,response){
 		if(err) console.log(err);
-		//socket.emit('meteoHistory', response);
-		console.log('findAll meteo:' + response.length);
 		meteoHistory = response;
 	});
 
 	if(meteoHistory.length > 0 ){
-		console.log('emit meteoHistory found :' + meteoHistory.length);
+		//console.log('emit meteoHistory found :' + meteoHistory.length);
 		socket.emit('meteoData', meteoHistory);
-	}
+	}*/
 	
 	socket.on('reqint', function(d) {
-		console.log('reqint invoked ' +d);
+		//console.log('reqint invoked ' +d);
 		if(!isNaN(d)) {
 			interval=d;
 			console.log('setting update interval to %d.', d);
@@ -191,32 +195,22 @@ io.sockets.on('connection', function(socket) {
 			socket.broadcast.emit('meteoHistory', response);
 		});
 
+	});
 		
-//		if(!isNaN(d)) {
-//			interval=d;
-//			console.log('setting update interval to %d.', d);
-//		}
-//		socket.broadcast.emit('setint', d);
+	socket.on('disconnect', function() {
+		delete sockets[socket.id];
+
+		// no more sockets, kill the stream
+		if (Object.keys(sockets).length == 0) {
+			app.set('watchingFile', false);
+			if (proc)
+				proc.kill();
+			fs.unwatchFile('./stream/image_stream.jpg');
+		}
 	});
 	
-//	socket.on('disconnect', function(){
-//		console.log('disconnected');
-//	});
-	
-	socket.on('disconnect', function() {
-	    delete sockets[socket.id];
-
-	    // no more sockets, kill the stream
-	    if (Object.keys(sockets).length == 0) {
-	      app.set('watchingFile', false);
-	      if (proc) proc.kill();
-	      fs.unwatchFile('./stream/image_stream.jpg');
-	    }
-	  });
-	
 	socket.on('lights', function(d){
-		console.log('ui onLights ' + d);
-
+		console.log('got light command  ' + d);
 		if(arm){
 			var gpio = require("pi-gpio");
 			if(d.status){
@@ -228,20 +222,36 @@ io.sockets.on('connection', function(socket) {
 	});
 	
 	socket.on('fans', function(d){
-		console.log('ui onFans ' + d);
+		console.log('got fan command ' + d);
 		if(arm){
 			var gpio = require("pi-gpio");
 			if(d.status){
-				heatservice.on();
+				fanservice.on();
 			}else{
-				heatservice.off();
+				fanservice.off();
 			}					
 		}
 	});
 	
+	socket.on('takeSnapshot', function(){
+		console.log('takeSnapshot ' );
+		if(arm){
+								
+		}else{
+			var args = ["-y","-f","video4linux2","-i", "/dev/video0","-vframes","1","./stream/image_stream.jpg"];
+			proc = spawn('ffmpeg', args);
+		}
+		
+		app.set('watchingFile', true);
+
+		fs.watchFile('./stream/image_stream.jpg', function(current, previous) {
+		  io.sockets.emit('liveStream', 'image_stream.jpg?_t=' + (Math.random() * 100000));
+		})
+	});
+	
 	socket.on('startStream', function() {
-	    startStreaming(io);
-	  });	
+		startStreaming(io);
+	});	
 });
 
 
@@ -265,8 +275,8 @@ cron.scheduleJob('*/1 * * * *', function(){
 		});
 	}
 	
-	if(heatservice){
-		heatservice.isOn(function(err,resp){
+	if(fanservice){
+		fanservice.isOn(function(err,resp){
 			if(err){ 
 				console.log(err);
 			}else{
@@ -275,43 +285,52 @@ cron.scheduleJob('*/1 * * * *', function(){
 			}
 		});
 	}
+	
 	if(arm){
-		
-		// TODO use config.ds18x20 address 
-		var value = tprobeSensor.probe('28-000005cff2dd');
-		var waterData = {water: ''+value};
-		mongo.create('water',waterData,function(err,response){
-			if(err) console.log(err);
-    		io.sockets.emit('waterData', response); 
-		});
-		
-		value = tprobeSensor.probe('28-000005e66282');
-		waterData = {water2: ''+value};
-		mongo.create('water2',waterData,function(err,response){
-			if(err) console.log(err);
-		    //console.log('water2Data response ' + response);
-    		io.sockets.emit('water2Data', response); 
-
-		});
-		
-		light.readLight(function(value){
-		    var lightData = {light:value};
-		    mongo.create('light',lightData,function(err,response){
+		if(probeSensorEnable){
+			// TODO use config.ds18x20 address 
+//			var value = tprobeSensor.probe('28-000005cff2dd');
+//			var waterData = {water: ''+value};
+//			mongo.create('water',waterData,function(err,response){
+//				if(err) console.log(err);
+//	    		io.sockets.emit('waterData', response); 
+//			});
+			
+			value = tprobeSensor.probe('28-000005e66282');
+			waterData = {water2: ''+value};
+			mongo.create('water2',waterData,function(err,response){
 				if(err) console.log(err);
-			    //console.log('lightData response ' + response);
-			    io.sockets.emit('lightData', response); 
+				
+				//console.log('notify heat service with value ' + value);
+				if(heatservice)
+					heatservice.monitor(value);
+
+			    //console.log('water2Data response ' + response);
+	    		io.sockets.emit('water2Data', response); 
+	    		
+	
 			});
-		});
+		}
+		
+		if(bh1750Enable){
+			light.readLight(function(value){
+			    var lightData = {light:value};
+			    mongo.create('light',lightData,function(err,response){
+					if(err) console.log(err);
+				    //console.log('lightData response ' + response);
+				    io.sockets.emit('lightData', response); 
+				});
+			});
+		}
 	}
 	else
 	{	
-		var t = getRandom(19, 22).toFixed(2);
+		var t = getRandom(19, 30).toFixed(2);
 		var h = getRandom(65, 75).toFixed(2);
 		mongo.create('meteo',{temperature:t,humidity:h},function(err,response){
 			if(err) console.log(err);
-		    //meteoHistory.push(response);
     		io.sockets.emit('meteoData', response); 
-    		heatservice.monitor(t,h);
+    		//heatservice.monitor(t);
 		});
 
 		mongo.create('water',{water: getRandom(18, 25).toFixed(2)},function(err,response){
@@ -321,6 +340,12 @@ cron.scheduleJob('*/1 * * * *', function(){
 		mongo.create('water2',{water2: getRandom(10, 15).toFixed(2)},function(err,response){
 			if(err) console.log(err);
 			io.sockets.emit('water2Data', response); 
+			
+			var s = getRandom(23, 27).toFixed(2);
+			
+			if(heatservice)
+				heatservice.monitor(s);
+
 		});
 		mongo.create('light',{light: getRandom(18, 25).toFixed(2)},function(err,response){
 			if(err) console.log(err);
@@ -335,6 +360,7 @@ process.on('SIGTERM', function() {
 	{
     	lightservice.stop();
     	heatservice.stop();
+    	fanservice.stop();
 	}
     console.log("Exiting...");
     process.exit();
@@ -368,6 +394,7 @@ function normalizePort(val) {
 //WEBCAM STREAMING
 
 function stopStreaming() {
+	console.log('stopStreaming CALLED');	
 	if (Object.keys(sockets).length == 0) {
 		app.set('watchingFile', false);
 		if (proc)
@@ -391,11 +418,8 @@ function startStreaming(io) {
   {
 	var args = ["-y","-f","video4linux2","-i", "/dev/video0","-vframes","1","./stream/image_stream.jpg"];
 	proc = spawn('ffmpeg', args);
-	console.log('startStreaming Spawned child pid: ' + proc.pid);
-   
+	//console.log('startStreaming Spawned child pid: ' + proc.pid);
   }
-
-  console.log('Watching for changes...');
 
   app.set('watchingFile', true);
 
@@ -405,10 +429,16 @@ function startStreaming(io) {
 }
 
 
-var lightservice = require('./lightservice');
+var lightservice = require('./service/light');
 lightservice.start();
 
-var heatservice = require('./heatservice');
+var heatservice = require('./service/heat');
 heatservice.start();
+
+var fanservice = require('./service/fan');
+fanservice.start();
+
+//var heatservice = require('./heatservice');
+//heatservice.start();
 
 var tprobeSensor = require('./ds18x20');

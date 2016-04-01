@@ -12,7 +12,7 @@ var config={
 	limit:10,
 	dhtVersion:22,
 	dhtPin: 24,
-	dhtTimeout:30000,// 5mins
+	dhtTimeout:300000,// 5mins
 	lightsPin: 11,
 	fansPin: 13,
 	lightsOn:{hour:'18',minute:'59'},
@@ -20,7 +20,7 @@ var config={
 	isVeg: true,
 	targetHumidity:40,
 	"relay1":{"pin":11,"gpio":17},
-	"relay2":{"pin":13,"gpio":27,enable:false,airExchangeNumber:70,flowCapacity: 145},
+	"relay2":{"pin":13,"gpio":27,enable:true,airExchangeNumber:70,flowCapacity: 145},
 	"relay3":{"pin":15,"gpio":22,targetTemperature:25},
 	"relay4":{"pin":19,"gpio":10},
 	"relay5":{"pin":21,"gpio":09},

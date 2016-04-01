@@ -1,21 +1,46 @@
 #!/usr/bin/env node
 
 var app = require('../app');
-
 var mongo = require('./mongo');
-
 var fs = require('fs');
-var debug = require('debug')('express-node-mongo-skeleton:server');
 var http = require('http');
-var proc;
 var https = require('https');
 var config = require('./config');
 var moment = require("moment");
+var arm = process.arch === 'arm';
+var cron = require('node-schedule');
+var spawn = require('child_process').spawn;
 
 var arch = process.arch;
-console.log('Arch:' + arch);
+var proc;
 
-var arm = process.arch === 'arm';
+//use all_d to hold config.limit number of data sets for initial connections
+var limit=config.limit, interval=config.interval, all_d=[];
+var meteoHistory = [];
+
+var bh1750Enable = config.bh1750Enable;
+var probeSensorEnable = config.probeSensorEnable;
+var tprobeSensor;
+if(probeSensorEnable)
+	tprobeSensor = require('./ds18x20');
+
+var lightsStatus = false;
+var fansStatus = false;
+
+var waterSensor = 0;
+var now = new Date();
+var BH1750;
+var light;
+
+var lightservice = require('./service/light');
+lightservice.start();
+
+var heatservice = require('./service/heat');
+heatservice.start();
+
+var fanservice = require('./service/fan');
+fanservice.start();
+
 
 /**
  * Get port from environment and store in Express.
@@ -24,7 +49,10 @@ var port = normalizePort(process.env.PORT || '4443');
 
 app.set('port', port);
 app.set('domain', '0.0.0.0');
-//https key/cert
+
+/**
+ * https key/cert
+ */
 var options;
 if(arm){
 	options = {
@@ -83,27 +111,8 @@ function onError(error) {
 function onListening() {
 	var addr = serverHttps.address();
 	var bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
-	debug('Listening on ' + bind);
+	console.log('Listening on ' + bind);
 }
-
-
-var cron = require('node-schedule');
-var spawn = require('child_process').spawn;
-
-//use all_d to hold config.limit number of data sets for initial connections
-var limit=config.limit, interval=config.interval, all_d=[];
-
-var bh1750Enable = config.bh1750Enable;
-var probeSensorEnable = config.probeSensorEnable;
-var meteoHistory = [];
-
-var lightsStatus = false;
-var fansStatus = false;
-
-var waterSensor = 0;
-var now = new Date();
-var BH1750;
-var light;
 
 if(arm){
 	
@@ -126,7 +135,7 @@ if(arm){
 			var readout = sensorLib.read();
 			var temperatureData = readout.temperature.toFixed(2);
 			var humidityData = readout.humidity.toFixed(2);
-			console.log('DHT TEMP: ' +temperatureData + ' HUMD: ' +humidityData + ' @'+moment().format());
+			console.log('DHT TEMP: ' +temperatureData + ' HUMD: ' +humidityData + ' @ ' + moment().format());
 			
 			var meteoData = {
 				temperature : temperatureData,
@@ -135,9 +144,7 @@ if(arm){
 
 			mongo.create('meteo',meteoData,function(err,response){
 				if(err) console.log(err);
-				//console.log('meteoData response ' + response);
 				io.sockets.emit('meteoData', response); 
-				
 			});
 			
 			setTimeout(function() {
@@ -161,56 +168,24 @@ cpuMonitor.emitInternalTemperature(io.sockets);
 io.sockets.on('connection', function(socket) {
 	
 	sockets[socket.id] = socket;
+	console.log('Client connected ' + socket.id);
 	
 	socket.emit('initialization', {interval:interval, limit:limit});
 	
-	/**
-	mongo.findAll('meteo',function(err,response){
-		if(err) console.log(err);
-		meteoHistory = response;
-	});
-
-	if(meteoHistory.length > 0 ){
-		//console.log('emit meteoHistory found :' + meteoHistory.length);
-		socket.emit('meteoData', meteoHistory);
-	}*/
-	
-	socket.on('reqint', function(d) {
-		//console.log('reqint invoked ' +d);
-		if(!isNaN(d)) {
-			interval=d;
-			console.log('setting update interval to %d.', d);
-		}
-		socket.broadcast.emit('setint', d);
-	});
-	
-	socket.on('onHistory', function(d) {
-		console.log('onHistory value ' +d);
-		
-		mongo.findAll('meteo',function(err,response){
-			if(err) console.log(err);
-			//socket.emit('meteoHistory', response);
-			console.log('findAll meteo:' + response.length);
-			meteoHistory = response;
-			socket.broadcast.emit('meteoHistory', response);
-		});
-
-	});
-		
 	socket.on('disconnect', function() {
 		delete sockets[socket.id];
 
 		// no more sockets, kill the stream
-		if (Object.keys(sockets).length == 0) {
-			app.set('watchingFile', false);
-			if (proc)
-				proc.kill();
-			fs.unwatchFile('./stream/image_stream.jpg');
-		}
+//		if (Object.keys(sockets).length == 0) {
+//			app.set('watchingFile', false);
+//			if (proc)
+//				proc.kill();
+//			fs.unwatchFile('./stream/image_stream.jpg');
+//		}
 	});
 	
 	socket.on('lights', function(d){
-		console.log('got light command  ' + d);
+		console.log('got light command  ' + d.status);
 		if(arm){
 			var gpio = require("pi-gpio");
 			if(d.status){
@@ -222,7 +197,7 @@ io.sockets.on('connection', function(socket) {
 	});
 	
 	socket.on('fans', function(d){
-		console.log('got fan command ' + d);
+		console.log('got fan command ' + d.status);
 		if(arm){
 			var gpio = require("pi-gpio");
 			if(d.status){
@@ -233,60 +208,61 @@ io.sockets.on('connection', function(socket) {
 		}
 	});
 	
-	socket.on('takeSnapshot', function(){
-		console.log('takeSnapshot ' );
-		if(arm){
-								
-		}else{
-			var args = ["-y","-f","video4linux2","-i", "/dev/video0","-vframes","1","./stream/image_stream.jpg"];
-			proc = spawn('ffmpeg', args);
-		}
-		
-		app.set('watchingFile', true);
-
-		fs.watchFile('./stream/image_stream.jpg', function(current, previous) {
-		  io.sockets.emit('liveStream', 'image_stream.jpg?_t=' + (Math.random() * 100000));
-		})
-	});
-	
-	socket.on('startStream', function() {
-		startStreaming(io);
-	});	
+//	socket.on('takeSnapshot', function(){
+//		console.log('takeSnapshot ' );
+//		if(arm){
+//								
+//		}else{
+//			var args = ["-y","-f","video4linux2","-i", "/dev/video0","-vframes","1","./stream/image_stream.jpg"];
+//			proc = spawn('ffmpeg', args);
+//		}
+//		
+//		app.set('watchingFile', true);
+//
+//		fs.watchFile('./stream/image_stream.jpg', function(current, previous) {
+//		  io.sockets.emit('liveStream', 'image_stream.jpg?_t=' + (Math.random() * 100000));
+//		})
+//	});
+//	
+//	socket.on('startStream', function() {
+//		startStreaming(io);
+//	});	
 });
 
 
-// +---------------- minute (0 - 59)
-// |  +------------- hour (0 - 23)
-// |  |  +---------- day of month (1 - 31)
-// |  |  |  +------- month (1 - 12)
-// |  |  |  |  +---- day of week (0 - 6) (Sunday=0 or 7)
-// |  |  |  |  |
-//t *  *  *  *  *  command to be executed
-cron.scheduleJob('*/1 * * * *', function(){
-
-	if(lightservice){
-		lightservice.isOn(function(err,resp){
-			if(err){ 
-				console.log(err);
-			}else{
-				lightsStatus = resp;
-				io.sockets.emit('initLights', {lights:lightsStatus});
-			}
-		});
-	}
+if(arm){
 	
-	if(fanservice){
-		fanservice.isOn(function(err,resp){
-			if(err){ 
-				console.log(err);
-			}else{
-				fanStatus = resp;
-				io.sockets.emit('initFans', {fans:fanStatus});
-			}
-		});
-	}
+	// +---------------- minute (0 - 59)
+	// |  +------------- hour (0 - 23)
+	// |  |  +---------- day of month (1 - 31)
+	// |  |  |  +------- month (1 - 12)
+	// |  |  |  |  +---- day of week (0 - 6) (Sunday=0 or 7)
+	// |  |  |  |  |
+	//t *  *  *  *  *  command to be executed
+	cron.scheduleJob('*/1 * * * *', function(){
 	
-	if(arm){
+		if(lightservice){
+			lightservice.isOn(function(err,resp){
+				if(err){ 
+					console.log(err);
+				}else{
+					lightsStatus = resp;
+					io.sockets.emit('initLights', {lights:lightsStatus});
+				}
+			});
+		}
+		
+		if(fanservice){
+			fanservice.isOn(function(err,resp){
+				if(err){ 
+					console.log(err);
+				}else{
+					fanStatus = resp;
+					io.sockets.emit('initFans', {fans:fanStatus});
+				}
+			});
+		}
+		
 		if(probeSensorEnable){
 			// TODO use config.ds18x20 address 
 //			var value = tprobeSensor.probe('28-000005cff2dd');
@@ -297,18 +273,14 @@ cron.scheduleJob('*/1 * * * *', function(){
 //			});
 			
 			value = tprobeSensor.probe('28-000005e66282');
-			waterData = {water2: ''+value};
-			mongo.create('water2',waterData,function(err,response){
+			waterData = {water: ''+value};
+			mongo.create('water',waterData,function(err,response){
 				if(err) console.log(err);
-				
 				//console.log('notify heat service with value ' + value);
 				if(heatservice)
 					heatservice.monitor(value);
-
 			    //console.log('water2Data response ' + response);
-	    		io.sockets.emit('water2Data', response); 
-	    		
-	
+	    		io.sockets.emit('waterData', response); 
 			});
 		}
 		
@@ -322,37 +294,34 @@ cron.scheduleJob('*/1 * * * *', function(){
 				});
 			});
 		}
-	}
-	else
-	{	
-		var t = getRandom(19, 30).toFixed(2);
-		var h = getRandom(65, 75).toFixed(2);
-		mongo.create('meteo',{temperature:t,humidity:h},function(err,response){
-			if(err) console.log(err);
-    		io.sockets.emit('meteoData', response); 
-    		//heatservice.monitor(t);
-		});
+	});
+	
+}else{
 
-		mongo.create('water',{water: getRandom(18, 25).toFixed(2)},function(err,response){
+	setInterval(function updateRandom() {
+		mongo.create('water',{water: getRandom(15, 24).toFixed(2)},function(err,response){
 			if(err) console.log(err);
+			//console.log('emit water1Data ' +response);
 			io.sockets.emit('waterData', response); 
-		});
-		mongo.create('water2',{water2: getRandom(10, 15).toFixed(2)},function(err,response){
-			if(err) console.log(err);
-			io.sockets.emit('water2Data', response); 
-			
-			var s = getRandom(23, 27).toFixed(2);
-			
-			if(heatservice)
-				heatservice.monitor(s);
 
 		});
-		mongo.create('light',{light: getRandom(18, 25).toFixed(2)},function(err,response){
+		
+		var meteoData = {
+			temperature : getRandom(21, 27).toFixed(2),
+			humidity : getRandom(40, 80).toFixed(2)
+		};
+
+		mongo.create('meteo',meteoData,function(err,response){
 			if(err) console.log(err);
-			io.sockets.emit('lightData', response); 
+			io.sockets.emit('meteoData', response); 
+			
 		});
-	}
-});
+		mongo.create('cpuData',{cpuData: getRandom(40,50).toFixed(2)},function(err,response){
+			if(err) console.log(err);
+			io.sockets.emit('cpuData', response); 
+		});	
+	}, config.dhtTimeout);
+}
 
 process.on('SIGTERM', function() {
     console.log("\nShutdown..");
@@ -391,7 +360,7 @@ function normalizePort(val) {
 	return false;
 }
 
-//WEBCAM STREAMING
+/**WEBCAM STREAMING
 
 function stopStreaming() {
 	console.log('stopStreaming CALLED');	
@@ -427,18 +396,4 @@ function startStreaming(io) {
     io.sockets.emit('liveStream', 'image_stream.jpg?_t=' + (Math.random() * 100000));
   })
 }
-
-
-var lightservice = require('./service/light');
-lightservice.start();
-
-var heatservice = require('./service/heat');
-heatservice.start();
-
-var fanservice = require('./service/fan');
-fanservice.start();
-
-//var heatservice = require('./heatservice');
-//heatservice.start();
-
-var tprobeSensor = require('./ds18x20');
+*/

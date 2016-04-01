@@ -18,3 +18,11 @@ router.post('/',
 
 module.exports = router;
 
+//exports.login = function(req, res){
+//	//res.render('login', { title: 'Hydra Login', jquery:true, socket:false });
+//	res.render('login', { title: 'Hydra Login', jquery:true, socket:false});
+//};
+
+//exports.index = function(req, res){
+//	res.render('index', { title: 'Hydra Home' });
+//};

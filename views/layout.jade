@@ -1,8 +1,8 @@
 doctype html
-html
+html(data-ng-app='myApp')
   include inc/header
 
-  body
+  body(data-ng-controller='MainCtrl', data-ng-cloak='')
   .navbar.navbar-default.navbar-static-top(role='navigation')
       .container
           .navbar-header
@@ -15,7 +15,7 @@ html
           .navbar-collapse.collapse
             ul.nav.navbar-nav
               //- var obj = { '/':'Home','graph':'Graph','about':'About','preferences':'Preferences','planner':'Planner','camera':'Camera' }
-              - var obj = { '/':'Home'}
+              - var obj = { '/index':'Home','/conf':'Conf'}
                 - each val, key in obj
                   - if (id == key)
                     li.active

@@ -1,63 +1,53 @@
 var socket=io.connect();
-
-
-var d1=[], d5=[], d15=[];
-var zone_delta=(new Date()).getTimezoneOffset()*60000;// time diff in ms
-var interval=60,limit=200; // show 2 hours data (7200/5) at interval=5sec
-
-var meteoData = [];
-var temperature = [];
-var humidity = [];
 var lights;
 var fans;
-var cpu;
+
+var water = [];
+var humd = [];
+var temp = [];
+
+var plot;
+var series=[
+    {data:water,label:'water'},
+    {data:humd,label:'humidity'},
+    {data:temp,label:'temperature'}
+];
 
 $(function() {
 	console.log('init bootstrapToggle()');
     $('#fans').bootstrapToggle();
     $('#lights').bootstrapToggle();
     $('#mode').bootstrapToggle();
-    /**
-	$('#update_int').slider( {
-		min:5,
-		max:30,
-		step:5,
-		value:interval,
-		slide: function(event, ui) {
-			console.log('update slider ' + ui.value);
-			$('#update_int_lbl').text(ui.value);
-			socket.emit('reqint', ui.value);
-		}
-	});
-	*/
 	lights = $('[data-toggle="lights-toggle"]').parent();
 	fans = $('[data-toggle="fans-toggle"]').parent();
 	
+	$('#fans').change(function() {
+		console.log('fans status ' + $(this).prop('checked'));
+		socket.emit('fans', {status: $(this).prop('checked')});
+	});
+	$('#lights').change(function() {
+		console.log('lights status ' + $(this).prop('checked'));
+		socket.emit('lights', {status: $(this).prop('checked')});
+	});
+
 });
 
-socket.on('setint', function(v) {
-	if (!isNaN(v)) {
-		console.log('got setint');
-		$('#update_int_lbl').text(v);
-		$('#update_int').slider('option', 'value', v);
-	}
-});
-  
 socket.on('initialization', function(v) {
+	//console.log('initialization ' + v);
 	if(v.interval){
 		interval=v.interval;
-		//console.log('INIT interval:' + interval);
-		$('#update_int_lbl').text(interval);
-		$('#update_int').slider('option', 'value', interval);
+		console.log('interval:' + interval);
+		//$('#update_int_lbl').text(interval);
+		//$('#update_int').slider('option', 'value', interval);
 	}
-	if(v.limit)
+	if(v.limit){
 		limit=v.limit;
+		console.log('limit:' + interval);
+	}
 });
 
 socket.on('initLights', function(v) {
-	
 	lights = $('[data-toggle="lights-toggle"]').parent();
-
 	console.log('lights:'+lights+' initLights ' +v.lights);
 	if(v.lights){
 		lights.removeClass('toggle btn btn-default off') ;
@@ -69,7 +59,6 @@ socket.on('initLights', function(v) {
 });
 
 socket.on('initFans', function(v) {
-	
 	fans = $('[data-toggle="fans-toggle"]').parent();
 	console.log('initFans ' +v.fans);
 	if(v.fans){
@@ -82,182 +71,82 @@ socket.on('initFans', function(v) {
 	}
 });
 
-socket.on('meteoHistory', function(data) {
-	console.log('meteoHistory data length ' + data.length);
+socket.on('waterData', function(v) {
+	$('.legendProbeData').html('<small>Water T:'+v.water+'°</small> ');
+	console.log('water ' + v.water);
+	var waterData = [];
+	waterData.push(new Date().getTime(),v.water);
+	water.push(waterData);
 	
-	for(var i=0; i< data.length;i++) {
-		var v = data[i];
-		//console.log('HISTORY v['+i+']' + v);
-		var currentDate = new Date(v.date);
-		var ts=currentDate.getTime() -zone_delta;
-		
-		var ts=v[0]-zone_delta;
-		
-		temperature.push([ts, v[1]]);	
-		humidity.push([ts, v[2]]);	
-		meteoData.push([ts,data]);
-	}
-
-	console.log('HISTORY temperature data length ' + temperature.length);
-	console.log('HISTORY temperature data length ' + temperature.length);
-	console.log('HISTORY meteoData length ' + meteoData.length);
-
-	rePlotMeteo();
-	
-	console.log('meteoHistory plot complete');
-	
+	replotGraph();
 });
 
-socket.on('meteoData', function(data) {
+//socket.on('tempData', function(v) {
+//	$('.legendTempData').html('<label>Temp:'+v.temp+'°</label> ');
+//	console.log('temperature ' + v.temp);
+//	var waterData = [];
+//	waterData.push(new Date().getTime(),v.temp);
+//	temp.push(waterData);
+//	
+//	replotGraph();
+//});
+//
+//socket.on('humData', function(v) {
+//	$('.legendHumData').html('<label>Humd:'+v.hum+'%</label> ');
+//	console.log('humidity ' + v.hum);
+//	var waterData = [];
+//	waterData.push(new Date().getTime(),v.hum);
+//	humd.push(waterData);
+//	
+//	replotGraph();
+//});
 
-	var  dataArray = [];
+socket.on('meteoData', function(v) {
 
-	if ( $.isArray( data ) ) {
-		dataArray = data;
-	}else{
-		console.log('single data element ' + data);
-		dataArray.push(data);
-	}
+	$('.legendTempData').html('<small>Temp:'+v.temperature+'°</small> ');
+	console.log('temperature ' + v.temperature);
+	var waterData = [];
+	waterData.push(new Date().getTime(),v.temperature);
+	temp.push(waterData);
+
+	$('.legendHumData').html('<small>Humd:'+v.humidity+'%</small> ');
+	console.log('humidity ' + v.humidity);
+	var waterData = [];
+	waterData.push(new Date().getTime(),v.humidity);
+	humd.push(waterData);
 	
-	for(var i = 0 ; i < dataArray.length ;i++){
-		var currentDate = new Date(dataArray[i].createdAt);
-		var ts=currentDate.getTime() -zone_delta;
-		temperature.push([ts, dataArray[i].temperature]);	
-		humidity.push([ts, dataArray[i].humidity]);	
-		meteoData.push([ts,dataArray[i]]);
-
-	}
-	$('.legendTemp').html('<p><strong>Temp:</strong> '+dataArray[dataArray.length-1].temperature+'</p>');
-	$('.legendHum').html('<p><strong> Hum:</strong> '+ dataArray[dataArray.length-1].humidity+'</p>');
-	rePlotMeteo();
-});
-
-socket.on('waterData', function(response) {
-	console.log('water data ' +response.water);
-	$('.legendWaterData').html('<p><strong>Temp:</strong> '+response.water);
-});
-
-socket.on('water2Data', function(v) {
-	console.log('water2 data ' +v.water2);
-	$('.legendWater2Data').html('<p><strong>Temp:</strong> '+v.water2);
+	replotGraph();
 });
 
 socket.on('lightData', function(v) {
-	console.log('light data ' +v.light);
-	$('.lightData').html('<p><strong>Lumen</strong> '+v.light);
+	$('.lightData').html('<small>Lumen:'+v.light+'</small>');
 });
 
-socket.on('cpuData', function(response,response2) {
-	console.log('cpu temp ' +response + ' ' + response2);
-	$('.cpuData').html('<p><strong>Temp:</strong> '+response2);
+socket.on('cpuData', function(v) {
+	$('.cpuData').html('<p><small>Cpu:'+v.cpuData+'</small> ');
 });
 
-function rePlotMeteo() {
-	console.log('meteoDataLen ' + meteoData.length + ' limit ' + limit);
-	
-	if(meteoData.length<1)
-		return; 
-	
-	// slice arrays if len>limit
-	if(meteoData.length>limit) {
-		temperature=temperature.slice(0-limit);
-		humidity=humidity.slice(0-limit);
-		meteoData = meteoData.slice(0-limit);
-	}
-	meteoDataLen = meteoData.length;
-	
-	var now = new Date().getTime();
-	if (!isNaN(meteoData[0][0])) {
-		var firstTimeStamp = meteoData[0][0];
-		now = firstTimeStamp;
-	}
-	
-	var lastTimeStamp = meteoData[meteoDataLen-1][0];
-	var tick_int = Math.round( (lastTimeStamp-now)/5000);
-	
-	console.log('temperature array ' + temperature.length);
-	console.log('humidity array ' + humidity.length);
-	
-	var series=[
-		{ data: temperature, label:'last 1 min load'},
-		{ data: humidity, label:'last 5 min load'}
-	];
-	
-	$.plot($('#testflot'), 
-			series,
+function replotGraph(){
+	plot = $.plot("#placeholder", series,
 		{
 			xaxis:{
 			 mode:'time', 
 			 timeFormat:'%h:%M:%S', 
-			 tickSize:[tick_int, "second"],
+			 tickSize:[60, "minute"],
 			 twelveHourClock: true
 			},
-			legend: { container: $('#plotLegend') }
-		}
-	);
-}
-
-$(function() {
-    $('#fans').change(function() {
-    	console.log('fans status ' + $(this).prop('checked'));
-    	socket.emit('fans', {status: $(this).prop('checked')});
-    })
-});
-
-$(function() {
-    $('#lights').change(function() {
-    	console.log('lights status ' + $(this).prop('checked'));
-    	socket.emit('lights', {status: $(this).prop('checked')});
-    })
-});
-
-$(function() {
-	$("#whole").change(function () {
-		console.log('whole temperature:' +temperature.length + ' humidity:' + humidity.length );
-		
-		var tick_int = 6000;
-		
-		var d=[
-				{ data: temperature, label:'last 1 min load'},
-				{ data: humidity, label:'last 5 min load'}
-			];
-		$.plot(
-			$('#testflot'), 
-			d,
-			{
-				xaxis:{
-				 mode:'time', 
-				 timeFormat:'%h:%M:%S', 
-				 tickSize:[tick_int, "second"],
-				 twelveHourClock: true
-				},
-				legend: { container: $('#plotLegend') }
+			//legend: { container: $('#plotLegend') }
+		series: {
+			lines: {
+				show: true
+			},
+			points: {
+				show: true
 			}
-		);		
+		},
+		grid: {
+			hoverable: true,
+			clickable: true
+		}
 	});
-});
-
-
-function getWhole() {
-	console.log('getWhole');
-	socket.emit('onHistory', 'all');
-	$('.whole').hide();
-}
-
-socket.on('liveStream', function(url) {
-	  console.log('on liveStream ' + url);
-  $('#stream').attr('src', url);
-});
-
-function takeSnapshot() {
-//	var value = $('.start').html();
-	socket.emit('takeSnapshot');
-//	if(value == 'Start Camera'){
-//		socket.emit('startStream');
-//		$('.start').html('Stop Camera');
-//	}else{
-//		socket.emit('stopStreaming');
-//		$('.start').html('Start Camera');
-//		
-//	}
 }

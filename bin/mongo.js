@@ -1,6 +1,8 @@
 var mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost/hydra');
-var db = mongoose.connection;
+//mongoose.connect('mongodb://localhost/hydra');
+
+//var db = mongoose.connection;
+var db = mongoose.createConnection('mongodb://localhost/hydra');
 
 db.on('error', console.error);
 
@@ -15,10 +17,11 @@ var
 	light = require('../model/light'),
 	meteo = require('../model/meteo'),
 	meter = require('../model/meter'),
-	planner = require('../model/planner'),
-	preferences = require('../model/preferences'),
+	cpu = require('../model/cpu'),
 	water = require('../model/water'),
-	water2 = require('../model/water2');
+	water1 = require('../model/water1'),
+	water2 = require('../model/water2'),
+	water3 = require('../model/water3');
 	//userInfo = require('../model/userInfo');
 
 exports.create = function create(collection,data,callback)

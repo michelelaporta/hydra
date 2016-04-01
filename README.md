@@ -4,6 +4,12 @@ Control your hydroponics green house using a Raspberry PI via the Browser using 
 
 USE AT YOUR OWN RISK wrong wires connections can cause damage to your RaspberryPI.
 
+# GPIO Layout
+
+![Alt gpio layout](./gpio.png "gpio layout")
+ 
+```
+
 # Arm vs x86
 
 In order to develop there a flag for arm vs x86

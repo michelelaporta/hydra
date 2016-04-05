@@ -12,7 +12,7 @@ var config={
 	limit:10,
 	dhtVersion:22,
 	dhtPin: 24,
-	dhtTimeout:300000,// 5mins
+	dhtTimeout:60000,// 5mins
 	lightsPin: 11,
 	fansPin: 13,
 	lightsOn:{hour:'18',minute:'59'},

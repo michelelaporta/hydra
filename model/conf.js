@@ -1,5 +1,15 @@
 var mongoose = require('mongoose');  
-var confSchema = new mongoose.Schema({  
-	conf: String
+var Conf = new mongoose.Schema({  
+	name: String,
+	description: String,
+	enable : Boolean,
+	gpio: String,
+	pin: String,
+	start:String,
+	stop:String,
+	target: String,
+	rate: String
 },{timestamps: true});
-mongoose.model('confSchema', confSchema);
+//Conf = mongoose.model('confSchema', Conf);
+
+module.exports = Conf;

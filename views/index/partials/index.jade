@@ -1,0 +1,51 @@
+div.row
+ div.col-xs-12
+  #accordion.panel-group(role='tablist', aria-multiselectable='true')
+    .panel.panel-default
+      #headingChannels.panel-heading(role='tab')
+        h4.panel-title
+          a(role='button', data-toggle='collapse', data-parent='#accordion', href='#collapseInfo', aria-expanded='true', aria-controls='collapseInfo') Channels
+      #collapseInfo.panel-collapse.collapse.in(role='tabpanel', aria-labelledby='headingChannels')
+        .panel-body
+         table.table.table-striped
+          tbody
+           tr
+            td(data-ng-repeat='conf in confs')
+             .checkbox
+              label {{conf.name}} {{conf.description}}
+              toggle-switch(data-ng-model='conf.enable',data-ng-click='switchChannel(conf)',class="switch-mini")
+
+div.row
+ div.col-xs-2
+  #accordion.panel-group(role='tablist', aria-multiselectable='true')
+    .panel.panel-default
+      #headingZero.panel-heading(role='tab')
+        h4.panel-title
+          a(role='button', data-toggle='collapse', data-parent='#accordion', href='#collapseInfo', aria-expanded='true', aria-controls='collapseInfo') INFO
+      #collapseInfo.panel-collapse.collapse.in(role='tabpanel', aria-labelledby='headingZero')
+        .panel-body
+         table.table.table-striped
+          tbody
+           tr
+            td
+             .legendProbeData
+           tr
+            td
+             .legendTempData
+           tr
+            td
+             .legendHumData
+           tr
+            td
+             .cpuData
+
+ div.col-xs-10
+  #accordion.panel-group(role='tablist', aria-multiselectable='true')
+    .panel.panel-default
+      #headingZero.panel-heading(role='tab')
+        h4.panel-title
+          a(role='button', data-toggle='collapse', data-parent='#accordion', href='#collapseZero', aria-expanded='true', aria-controls='collapseZero') Graph
+      #collapseZero.panel-collapse.collapse.in(role='tabpanel', aria-labelledby='headingZero')
+        .panel-body
+          div#placeholder(style='width=100px;height:150px;')|loading data
+

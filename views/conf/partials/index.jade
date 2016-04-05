@@ -3,19 +3,35 @@ h3 Configuration
 table.table.table-striped
   thead
     td Id
-    td First Name
-    td Last Name
-    td Age
-    td Actions
+    td Name
+    td Description
+    td Enable
+    td Gpio
+    td Pin
+    td Start
+    td Stop
+    td Target
+    td Rate
+    td Action
+    td Action
+    td Action
   tbody
-    tr(ng-repeat="contact in confs")
-      td {{contact._id}}
-      td {{contact.firstname}}
-      td {{contact.lastname}}
-      td {{contact.age}}
+    tr(ng-repeat="conf in confs")
+      td {{conf._id}}
+      td {{conf.name}}
+      td {{conf.description}}
+      td {{conf.enable}}
+      td {{conf.gpio}}
+      td {{conf.pin}}
+      td {{conf.start}}
+      td {{conf.stop}}
+      td {{conf.target}}
+      td {{conf.rate}}
       td
-        a(href="/conf/{{contact._id}}") Show
-        a(href="/conf/{{contact._id}}/edit") Edit
-
+        a(href="/conf/{{conf._id}}") Show
+      td
+        a(href="/conf/{{conf._id}}/edit") Edit
+      td
+        a.btn.btn-danger(ng-click='delete(conf._id)') Delete
 
 button.btn.btn-success(ng-click="new()") New Conf

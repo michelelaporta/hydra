@@ -1,6 +1,6 @@
 app.controller("ConfEditCtrl", function($scope, $routeParams, $location, Conf) {
 
-	console.log('ConfEditCtrl INVOKED');
+	console.log('ConfEditCtrl INVOKED ' + $routeParams.id);
 
 	if ($routeParams.id) {
 		$scope.conf = Conf.show({ id: $routeParams.id });

@@ -18,10 +18,29 @@ var proc;
 var limit=config.limit, interval=config.interval, all_d=[];
 var meteoHistory = [];
 
+var bh1750Enable = config.bh1750Enable;
 var probeSensorEnable = config.probeSensorEnable;
 var tprobeSensor;
 if(probeSensorEnable)
 	tprobeSensor = require('./ds18x20');
+
+var lightsStatus = false;
+var fansStatus = false;
+
+var waterSensor = 0;
+var now = new Date();
+var BH1750;
+var light;
+
+var lightservice = require('./service/light');
+lightservice.start();
+
+var heatservice = require('./service/heat');
+heatservice.start();
+
+var fanservice = require('./service/fan');
+fanservice.start();
+
 
 /**
  * Get port from environment and store in Express.
@@ -97,6 +116,13 @@ function onListening() {
 
 if(arm){
 	
+	if(bh1750Enable){
+		// initialize light sensor
+		BH1750 = require('./bh1750');
+		if(!light)
+			light = new BH1750();
+	}
+	
 	var sensorLib = require('node-dht-sensor');
 
 	var sensor = {
@@ -134,69 +160,85 @@ if(arm){
 	}
 }
 
-var channelServices = [];
-var channels = require('./service/channels');
-
-var query = channels.getAllChannels();
-var promise = query.exec();
-var Channel = require('./service/channelservice');
-var Scheduled = require('./service/scheduled');
-promise.addBack(function (err, inputs) {
-    if(err)
-        console.log(err);
-    var i;
-    for (i in inputs) {
-    	var ch = new Channel(inputs[i]);
-		var scheduled = new Scheduled(ch);
-    	channelServices.push(scheduled);
-		//if(ch.enable)
-		scheduled.start();
-    }
-});	
-
-
 var sockets = {};
+
+var cpuMonitor = require('./service/cpu');
+cpuMonitor.emitInternalTemperature(io.sockets);
 
 io.sockets.on('connection', function(socket) {
 	
 	sockets[socket.id] = socket;
 	console.log('Client connected ' + socket.id);
 	
-	for (var x = 0; x < channelServices.length; x++) {
-		var currentSrv = channelServices[x];
-		var y = x+1;
-		io.sockets.emit('initChannel', currentSrv.getService().getChannel(),y); 
-	}
+	socket.emit('initialization', {interval:interval, limit:limit});
 	
-	socket.on('channel', function(channel){
-		console.log('got command for channel ' +channel.name +' enable ' + channel.enable);
-		
-		for (var x = 0; x < channelServices.length; x++) {
-			var currentSrv = channelServices[x];
-			if(currentSrv.getService().getChannel().name == channel.name){
-				console.log('found channel ' + channel.name);
-				if(channel.enable){
-					currentSrv.start();
-				}else{
-					currentSrv.stop();
-				}
+	socket.on('disconnect', function() {
+		delete sockets[socket.id];
 
-//				if(channel.enable){
-//					if(!currentSrv.getService().isOpen()){
-//						currentSrv.getService().open();
-//					}						
-//				}else{
-//					if(currentSrv.getService().isOpen()){
-//						currentSrv.getService().close();
-//					}
-//				}
+		// no more sockets, kill the stream
+//		if (Object.keys(sockets).length == 0) {
+//			app.set('watchingFile', false);
+//			if (proc)
+//				proc.kill();
+//			fs.unwatchFile('./stream/image_stream.jpg');
+//		}
+	});
+	
+	socket.on('lights', function(d){
+		console.log('got light command  ' + d.status);
+		if(arm){
+			var gpio = require("pi-gpio");
+			if(d.status){
+				lightservice.on();
+			}else{
+				lightservice.off();
 			}
 		}
 	});
-	socket.on('disconnect', function() {
-		delete sockets[socket.id];
+	
+	socket.on('fans', function(d){
+		console.log('got fan command ' + d.status);
+		if(arm){
+			var gpio = require("pi-gpio");
+			if(d.status){
+				fanservice.on();
+			}else{
+				fanservice.off();
+			}					
+		}
 	});
 	
+	socket.on('channel', function(d){
+		console.log('got channel command ' + d.status);
+		if(arm){
+			var gpio = require("pi-gpio");
+			if(d.status){
+				fanservice.on();
+			}else{
+				fanservice.off();
+			}					
+		}
+	});
+	
+//	socket.on('takeSnapshot', function(){
+//		console.log('takeSnapshot ' );
+//		if(arm){
+//								
+//		}else{
+//			var args = ["-y","-f","video4linux2","-i", "/dev/video0","-vframes","1","./stream/image_stream.jpg"];
+//			proc = spawn('ffmpeg', args);
+//		}
+//		
+//		app.set('watchingFile', true);
+//
+//		fs.watchFile('./stream/image_stream.jpg', function(current, previous) {
+//		  io.sockets.emit('liveStream', 'image_stream.jpg?_t=' + (Math.random() * 100000));
+//		})
+//	});
+//	
+//	socket.on('startStream', function() {
+//		startStreaming(io);
+//	});	
 });
 
 
@@ -211,6 +253,28 @@ if(arm){
 	//t *  *  *  *  *  command to be executed
 	cron.scheduleJob('*/1 * * * *', function(){
 	
+		if(lightservice){
+			lightservice.isOn(function(err,resp){
+				if(err){ 
+					console.log(err);
+				}else{
+					lightsStatus = resp;
+					io.sockets.emit('initLights', {lights:lightsStatus});
+				}
+			});
+		}
+		
+		if(fanservice){
+			fanservice.isOn(function(err,resp){
+				if(err){ 
+					console.log(err);
+				}else{
+					fanStatus = resp;
+					io.sockets.emit('initFans', {fans:fanStatus});
+				}
+			});
+		}
+		
 		if(probeSensorEnable){
 			// TODO use config.ds18x20 address 
 //			var value = tprobeSensor.probe('28-000005cff2dd');
@@ -225,10 +289,21 @@ if(arm){
 			mongo.create('water',waterData,function(err,response){
 				if(err) console.log(err);
 				//console.log('notify heat service with value ' + value);
-				//if(heatservice)
-					//heatservice.monitor(value);
+				if(heatservice)
+					heatservice.monitor(value);
 			    //console.log('water2Data response ' + response);
 	    		io.sockets.emit('waterData', response); 
+			});
+		}
+		
+		if(bh1750Enable){
+			light.readLight(function(value){
+			    var lightData = {light:value};
+			    mongo.create('light',lightData,function(err,response){
+					if(err) console.log(err);
+				    //console.log('lightData response ' + response);
+				    io.sockets.emit('lightData', response); 
+				});
 			});
 		}
 	});
@@ -236,7 +311,6 @@ if(arm){
 }else{
 
 	setInterval(function updateRandom() {
-		
 		mongo.create('water',{water: getRandom(15, 24).toFixed(2)},function(err,response){
 			if(err) console.log(err);
 			//console.log('emit water1Data ' +response);
@@ -258,26 +332,17 @@ if(arm){
 			if(err) console.log(err);
 			io.sockets.emit('cpuData', response); 
 		});	
-		
-		for (var x = 0; x < channelServices.length; x++) {
-			var currentScheduled = channelServices[x];
-			//console.log('Notify channel name=' + currentScheduled.getService().getChannel().name);
-			if(currentScheduled.getService().getChannel().enable)
-				currentScheduled.getService().monitor(meteoData);
-		}
-				
-		
 	}, config.dhtTimeout);
 }
 
 process.on('SIGTERM', function() {
     console.log("\nShutdown..");
-    
-	for (var x = 0; x < channelServices.length; x++) {
-		var currentSrv = channelServices[x];
-		currentSrv.stop();
-	}    	
-    	
+    if(arm)
+	{
+    	lightservice.stop();
+    	heatservice.stop();
+    	fanservice.stop();
+	}
     console.log("Exiting...");
     process.exit();
 });
@@ -307,4 +372,40 @@ function normalizePort(val) {
 	return false;
 }
 
+/**WEBCAM STREAMING
 
+function stopStreaming() {
+	console.log('stopStreaming CALLED');	
+	if (Object.keys(sockets).length == 0) {
+		app.set('watchingFile', false);
+		if (proc)
+			proc.kill();
+		fs.unwatchFile('./stream/image_stream.jpg');
+	}
+}
+
+function startStreaming(io) {
+  console.log('startStreaming CALLED');	
+  if (app.get('watchingFile')) {
+    io.sockets.emit('liveStream', 'image_stream.jpg?_t=' + (Math.random() * 100000));
+    return;
+  }
+  if(arm)
+  {
+   var args = ["-w", "640", "-h", "480", "-o", "./stream/image_stream.jpg", "-t", "999999999", "-tl", "100"];
+   proc = spawn('raspistill', args);
+  }
+  else
+  {
+	var args = ["-y","-f","video4linux2","-i", "/dev/video0","-vframes","1","./stream/image_stream.jpg"];
+	proc = spawn('ffmpeg', args);
+	//console.log('startStreaming Spawned child pid: ' + proc.pid);
+  }
+
+  app.set('watchingFile', true);
+
+  fs.watchFile('./stream/image_stream.jpg', function(current, previous) {
+    io.sockets.emit('liveStream', 'image_stream.jpg?_t=' + (Math.random() * 100000));
+  })
+}
+*/

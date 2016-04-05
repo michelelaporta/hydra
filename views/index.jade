@@ -6,41 +6,5 @@ block extra_js
 block content
   //#main.container-fluid(data-ng-controller='MainCtrl', data-ng-cloak='')
   #main.container
-    div.row
-     div.col-xs-12
-      #accordion.panel-group(role='tablist', aria-multiselectable='true')
-        .panel.panel-default
-          #headingZero.panel-heading(role='tab')
-            h4.panel-title
-              a(role='button', data-toggle='collapse', data-parent='#accordion', href='#collapseInfo', aria-expanded='true', aria-controls='collapseInfo') INFO
-          #collapseInfo.panel-collapse.collapse.in(role='tabpanel', aria-labelledby='headingZero')
-            .panel-body
-              .checkbox
-                label Lights : 
-                input#lights(type='checkbox', data-toggle='lights-toggle')
-                label Fans : 
-                input#fans(type='checkbox', data-toggle='fans-toggle')
-    div.row
-     div.col-xs-2
-      #accordion.panel-group(role='tablist', aria-multiselectable='true')
-        .panel.panel-default
-          #headingZero.panel-heading(role='tab')
-            h4.panel-title
-              a(role='button', data-toggle='collapse', data-parent='#accordion', href='#collapseInfo', aria-expanded='true', aria-controls='collapseInfo') INFO
-          #collapseInfo.panel-collapse.collapse.in(role='tabpanel', aria-labelledby='headingZero')
-            .panel-body
-              label         
-                .legendTempData
-                .legendHumData
-                .legendProbeData
-                .cpuData
-     div.col-xs-10
-      #accordion.panel-group(role='tablist', aria-multiselectable='true')
-        .panel.panel-default
-          #headingZero.panel-heading(role='tab')
-            h4.panel-title
-              a(role='button', data-toggle='collapse', data-parent='#accordion', href='#collapseZero', aria-expanded='true', aria-controls='collapseZero') Graph
-          #collapseZero.panel-collapse.collapse.in(role='tabpanel', aria-labelledby='headingZero')
-            .panel-body
-              div#placeholder(style='width=100px;height:150px;')|loading data
+   ng-view  
       

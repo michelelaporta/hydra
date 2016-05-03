@@ -1,6 +1,5 @@
 var mongoose = require('mongoose');
 //mongoose.connect('mongodb://localhost/hydra');
-
 //var db = mongoose.connection;
 var db = mongoose.createConnection('mongodb://localhost/hydra');
 
@@ -10,7 +9,6 @@ db.once('open', function() {
   // Create your schemas and models here.
 	console.log('mongo connection successfully opened');
 });
-
 
 // register model
 var
@@ -22,7 +20,9 @@ var
 	water1 = require('../model/water1'),
 	water2 = require('../model/water2'),
 	water3 = require('../model/water3');
+//	conf = require('../model/conf');
 	//userInfo = require('../model/userInfo');
+
 
 exports.create = function create(collection,data,callback)
 {
@@ -55,8 +55,21 @@ exports.findAll = function findAll(collection,callback)
       	  return callback(null,data);
         }
 	});
-
 }
+
+exports.getAllChannels = function getAllChannels() {
+    var callback = function() {
+        return function(error, data) {
+            if(error) {
+                console.log("Error: " + error);
+            }
+            //console.log("Boards from Server (fct): " + data);
+        }
+    };
+
+    return conf.find({}, callback());
+};
+
 /**
 exports.findUser = function findUser(collection,username,password,callback)
 {
@@ -76,4 +89,3 @@ exports.findUser = function findUser(collection,username,password,callback)
         }
 	});	
 }*/
-

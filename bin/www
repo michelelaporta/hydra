@@ -10,26 +10,25 @@ var moment = require("moment");
 var arm = process.arch === 'arm';
 var cron = require('node-schedule');
 var spawn = require('child_process').spawn;
-
 var arch = process.arch;
 var proc;
+
+var probeSensorEnable = config.probeSensorEnable;
+var tprobeSensor;
 
 //use all_d to hold config.limit number of data sets for initial connections
 var limit=config.limit, interval=config.interval, all_d=[];
 var meteoHistory = [];
 
-var probeSensorEnable = config.probeSensorEnable;
-var tprobeSensor;
-if(probeSensorEnable)
-	tprobeSensor = require('./ds18x20');
+var sockets = {};
 
 /**
  * Get port from environment and store in Express.
  */
-var port = normalizePort(process.env.PORT || '4443');
+var port = normalizePort(process.env.PORT || config.bindPort);
 
 app.set('port', port);
-app.set('domain', '0.0.0.0');
+app.set('domain', config.bindAddress);
 
 /**
  * https key/cert
@@ -95,52 +94,29 @@ function onListening() {
 	console.log('Listening on ' + bind);
 }
 
-if(arm){
-	
-	var sensorLib = require('node-dht-sensor');
+//mongo.findAll('water',waterData,function(err,response){
+//	if(err) console.log(err);
+//	//console.log('notify heat service with value ' + value);
+//	//if(heatservice)
+//		//heatservice.monitor(value);
+//    //console.log('water2Data response ' + response);
+//	io.sockets.emit('waterData', response); 
+//});
 
-	var sensor = {
-		initialize : function() {
-			var dhtSensor = sensorLib.initialize(config.dhtVersion, config.dhtPin);
-			console.log('initializing DHT:' + config.dhtVersion + ' sensor on pin:'	+ config.dhtPin);
-			return dhtSensor;
-		},
-		read : function() {
-			var readout = sensorLib.read();
-			var temperatureData = readout.temperature.toFixed(2);
-			var humidityData = readout.humidity.toFixed(2);
-			console.log('DHT TEMP: ' +temperatureData + ' HUMD: ' +humidityData + ' @ ' + moment().format());
-			
-			var meteoData = {
-				temperature : temperatureData,
-				humidity : humidityData
-			};
-
-			mongo.create('meteo',meteoData,function(err,response){
-				if(err) console.log(err);
-				io.sockets.emit('meteoData', response); 
-			});
-			
-			setTimeout(function() {
-				sensor.read();
-			}, config.dhtTimeout);
-		}
-	};
-
-	if (sensor.initialize()) {
-		sensor.read();
-	} else {
-		console.warn('Failed to initialize sensor');
-	}
-}
-
+/**
+ * Service
+ */
 var channelServices = [];
-var channels = require('./service/channels');
 
+//var query = mongo.getAllChannels();
+
+var channels = require('./service/channels');
 var query = channels.getAllChannels();
+
 var promise = query.exec();
 var Channel = require('./service/channelservice');
 var Scheduled = require('./service/scheduled');
+
 promise.addBack(function (err, inputs) {
     if(err)
         console.log(err);
@@ -155,18 +131,113 @@ promise.addBack(function (err, inputs) {
 });	
 
 
-var sockets = {};
+if(arm){
+	if(config.dhtEnable){
+		var sensorLib = require('node-dht-sensor');
+
+		var sensor = {
+			initialize : function() {
+				var dhtSensor = sensorLib.initialize(config.dhtVersion, config.dhtPin);
+				console.log('initializing DHT:' + config.dhtVersion + ' sensor on pin:'	+ config.dhtPin);
+				return dhtSensor;
+			},
+			read : function() {
+				var readout = sensorLib.read();
+				var temperatureData = readout.temperature.toFixed(2);
+				var humidityData = readout.humidity.toFixed(2);
+				console.log('DHT TEMP: ' +temperatureData + ' HUMD: ' +humidityData + ' @ ' + moment().format());
+				
+				var meteoData = {
+					temperature : temperatureData,
+					humidity : humidityData
+				};
+
+				mongo.create('meteo',meteoData,function(err,response){
+					if(err) console.log(err);
+					io.sockets.emit('meteoData', response); 
+					
+					//console.log('channelServices ' + channelServices.length);
+		    		for (var x = 0; x < channelServices.length; x++) {
+		    			var currentScheduled = channelServices[x];
+		    			//console.log('Notify channel name=' + currentScheduled.getService().getChannel().name);
+		    			if(currentScheduled.getService().getChannel().enable)
+		    				currentScheduled.getService().monitorTemperature(meteoData);
+		    		}
+
+				});
+				
+				setTimeout(function() {
+					sensor.read();
+					if(probeSensorEnable)
+						probeWaterSensor();
+				}, config.dhtTimeout);
+			}
+		};
+
+		if (sensor.initialize()) {
+			sensor.read();
+		} else {
+			console.warn('Failed to initialize sensor');
+		}
+	}else{
+		if(probeSensorEnable){
+			cron.scheduleJob( config.probeTimeout + ' * * * * *', function(){
+				probeWaterSensor();	
+			});			
+		}
+	}
+}else{
+	setInterval(function updateRandom() {
+		mongo.create('water',{water: getRandom(15, 24).toFixed(2)},function(err,response){
+			if(err) console.log(err);
+			//console.log('emit water1Data ' +response);
+			io.sockets.emit('waterData', response); 
+
+		});
+		var meteoData = {
+			temperature : getRandom(21, 27).toFixed(2),
+			humidity : getRandom(40, 80).toFixed(2)
+		};
+		mongo.create('meteo',meteoData,function(err,response){
+			if(err) console.log(err);
+			io.sockets.emit('meteoData', response); 
+			
+		});
+		mongo.create('cpuData',{cpuData: getRandom(40,50).toFixed(2)},function(err,response){
+			if(err) console.log(err);
+			io.sockets.emit('cpuData', response); 
+		});	
+		for (var x = 0; x < channelServices.length; x++) {
+			var currentScheduled = channelServices[x];
+			//console.log('Notify channel name=' + currentScheduled.getService().getChannel().name);
+			if(currentScheduled.getService().getChannel().enable)
+				currentScheduled.getService().monitorTemperature(meteoData);
+		}
+	}, config.dhtTimeout);
+}
+
+var clients = [];
 
 io.sockets.on('connection', function(socket) {
+	
+	// Adds socket to list of sockets
+	clients.push(socket);
 	
 	sockets[socket.id] = socket;
 	console.log('Client connected ' + socket.id);
 	
 	for (var x = 0; x < channelServices.length; x++) {
 		var currentSrv = channelServices[x];
+		var currentChannelService = currentSrv.getService();
+		currentChannelService.addSocket(socket);
 		var y = x+1;
-		io.sockets.emit('initChannel', currentSrv.getService().getChannel(),y); 
+		io.sockets.emit('initChannel', currentChannelService.getChannel(),y); 
 	}
+	
+	socket.on('open',function(channel){
+		console.log('got open ' +channel.name +' enable ' + channel.enable);
+		
+	});
 	
 	socket.on('channel', function(channel){
 		console.log('got command for channel ' +channel.name +' enable ' + channel.enable);
@@ -180,7 +251,6 @@ io.sockets.on('connection', function(socket) {
 				}else{
 					currentSrv.stop();
 				}
-
 //				if(channel.enable){
 //					if(!currentSrv.getService().isOpen()){
 //						currentSrv.getService().open();
@@ -193,91 +263,22 @@ io.sockets.on('connection', function(socket) {
 			}
 		}
 	});
+//	socket.on('disconnect', function() {
+//		delete sockets[socket.id];
+//	});
+	
+	// Removes socket from list of sockets
 	socket.on('disconnect', function() {
-		delete sockets[socket.id];
+		clients.splice(clients.indexOf(socket), 1);
 	});
-	
 });
-
-
-if(arm){
-	
-	// +---------------- minute (0 - 59)
-	// |  +------------- hour (0 - 23)
-	// |  |  +---------- day of month (1 - 31)
-	// |  |  |  +------- month (1 - 12)
-	// |  |  |  |  +---- day of week (0 - 6) (Sunday=0 or 7)
-	// |  |  |  |  |
-	//t *  *  *  *  *  command to be executed
-	cron.scheduleJob('*/1 * * * *', function(){
-	
-		if(probeSensorEnable){
-			// TODO use config.ds18x20 address 
-//			var value = tprobeSensor.probe('28-000005cff2dd');
-//			var waterData = {water: ''+value};
-//			mongo.create('water',waterData,function(err,response){
-//				if(err) console.log(err);
-//	    		io.sockets.emit('waterData', response); 
-//			});
-			
-			value = tprobeSensor.probe('28-000005e66282');
-			waterData = {water: ''+value};
-			mongo.create('water',waterData,function(err,response){
-				if(err) console.log(err);
-				//console.log('notify heat service with value ' + value);
-				//if(heatservice)
-					//heatservice.monitor(value);
-			    //console.log('water2Data response ' + response);
-	    		io.sockets.emit('waterData', response); 
-			});
-		}
-	});
-	
-}else{
-
-	setInterval(function updateRandom() {
-		
-		mongo.create('water',{water: getRandom(15, 24).toFixed(2)},function(err,response){
-			if(err) console.log(err);
-			//console.log('emit water1Data ' +response);
-			io.sockets.emit('waterData', response); 
-
-		});
-		
-		var meteoData = {
-			temperature : getRandom(21, 27).toFixed(2),
-			humidity : getRandom(40, 80).toFixed(2)
-		};
-
-		mongo.create('meteo',meteoData,function(err,response){
-			if(err) console.log(err);
-			io.sockets.emit('meteoData', response); 
-			
-		});
-		mongo.create('cpuData',{cpuData: getRandom(40,50).toFixed(2)},function(err,response){
-			if(err) console.log(err);
-			io.sockets.emit('cpuData', response); 
-		});	
-		
-		for (var x = 0; x < channelServices.length; x++) {
-			var currentScheduled = channelServices[x];
-			//console.log('Notify channel name=' + currentScheduled.getService().getChannel().name);
-			if(currentScheduled.getService().getChannel().enable)
-				currentScheduled.getService().monitor(meteoData);
-		}
-				
-		
-	}, config.dhtTimeout);
-}
 
 process.on('SIGTERM', function() {
     console.log("\nShutdown..");
-    
 	for (var x = 0; x < channelServices.length; x++) {
 		var currentSrv = channelServices[x];
 		currentSrv.stop();
 	}    	
-    	
     console.log("Exiting...");
     process.exit();
 });
@@ -305,6 +306,35 @@ function normalizePort(val) {
 	}
 
 	return false;
+}
+
+function probeWaterSensor(){
+	try {
+		if(arm){
+			if(!tprobeSensor)
+				tprobeSensor = require('./ds18x20');
+			var value = tprobeSensor.probe('28-000005e66282');
+			if(value){
+				console.log('PROBE TEMP: ' + value + ' @ ' + moment().format() );
+				var waterData = {water: ''+value};
+				mongo.create('water',waterData,function(err,response){
+					if(err) console.log(err);
+					else{
+			    		io.sockets.emit('waterData', response);
+			    		for (var x = 0; x < channelServices.length; x++) {
+			    			var currentScheduled = channelServices[x];
+			    			//console.log('Notify channel name=' + currentScheduled.getService().getChannel().name);
+			    			if(currentScheduled.getService().getChannel().enable)
+			    				currentScheduled.getService().monitorWater(waterData);
+			    		}
+					}
+				});			
+			}
+		}				
+		
+	}catch(err) {
+	    console.log('error on probe ' +err);
+	} 				
 }
 
 

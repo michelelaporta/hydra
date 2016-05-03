@@ -2,7 +2,11 @@ var express = require('express');
 var router = express.Router();
 
 // GET
-router.get('/', function(req, res, next) {
+//router.get('/', function(req, res, next) {
+//	res.render('conf', {title : 'Hydra Conf',what : 'Conf',author : 'Anon'});
+//});
+router.get('/', require('connect-ensure-login').ensureLoggedIn(), function(req, res) {
+	//console.log('req.user ' +req.user)
 	res.render('conf', {title : 'Hydra Conf',what : 'Conf',author : 'Anon'});
 });
 

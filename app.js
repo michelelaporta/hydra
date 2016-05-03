@@ -25,9 +25,12 @@ app.set('view engine', 'jade');
 app.use(express.static('public'));
 //app.use('/', express.static(path.join(__dirname, 'stream')));
 app.use(favicon(__dirname + '/public/favicon.ico'));
+
 app.use(cookieParser());
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+//app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({ extended: true }));
+
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -36,6 +39,7 @@ app.use('/index', index);
 app.use('/conf', conf);
 app.use('/api', api);
 
+app.get('*', index);
 app.get('*', login);
 
 passport.serializeUser(function(user, done) {

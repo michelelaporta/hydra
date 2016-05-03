@@ -1,4 +1,7 @@
 div.row
+  #myconf
+    hello
+div.row
  div.col-xs-12
   #accordion.panel-group(role='tablist', aria-multiselectable='true')
     .panel.panel-default
@@ -12,8 +15,9 @@ div.row
            tr
             td(data-ng-repeat='conf in confs')
              .checkbox
-              label {{conf.name}} {{conf.description}}
-              toggle-switch(data-ng-model='conf.enable',data-ng-click='switchChannel(conf)',class="switch-mini")
+              label {{conf.name}} 
+              label {{conf.description}}
+              toggle-switch(data-ng-model='conf.enable',data-ng-click='switchChannel(conf.enable)',class='switch-{{conf.name}} switch-mini')
 
 div.row
  div.col-xs-2
@@ -48,4 +52,3 @@ div.row
       #collapseZero.panel-collapse.collapse.in(role='tabpanel', aria-labelledby='headingZero')
         .panel-body
           div#placeholder(style='width=100px;height:150px;')|loading data
-

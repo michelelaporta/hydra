@@ -28,6 +28,7 @@
     "normalize.css": "^3.0.3",
     "passport": "^0.3.2",
     "passport-local": "^1.0.0",
+    "connect-ensure-login": "^0.1.1",
     "pi-gpio": "0.0.8",
     "pid-controller": "^1.0.3",
     "serve-favicon": "~2.3.0",

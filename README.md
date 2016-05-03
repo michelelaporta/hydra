@@ -218,6 +218,34 @@ add a generated encrypted password:
 
 `sudo apt-get install mongodb-server`
 
+#Install hydra database
+
+###drop
+
+`mongo hydra --eval "db.dropDatabase()"`
+
+or
+
+`mongo`
+
+`> show databases;`
+
+`> use hydra;`
+
+`> db.dropDatabase();`
+
+`> exit;`
+
+###dump
+
+`mongodump -d hydra`
+
+###import
+
+
+`mongorestore -d hydra ./db`
+
+
 #Install node.js 
 
 `curl -sLS https://apt.adafruit.com/add | sudo bash`

@@ -11,21 +11,32 @@ var series=[
     {data:temp,label:'temperature'}
 ];
 
-$(function() {
-	console.log('init');
-});
+//$(function() {
+//	console.log('init');
+//});
 
 socket.on('initChannel', function(channel,i) {
-	
 	channels.push(channel);
+});
 
-//	if(channel.enable){
-//		$('[data-toggle="channel'+i+'-toggle"]').parent().removeClass('toggle btn btn-default off');
-//		$('[data-toggle="channel'+i+'-toggle"]').parent().addClass('toggle btn btn-default on');
-//	}else{
-//		$('[data-toggle="channel'+i+'-toggle"]').parent().removeClass('toggle btn btn-default on');
-//		$('[data-toggle="channel'+i+'-toggle"]').parent().addClass('toggle btn btn-default off');
-//	}
+socket.on('channelOpen', function(channel,isOpen) {
+	console.log('channelOpen ' + channel.name + ' isOn ' + isOpen);
+});
+socket.on('channelClose', function(channel,isOpen) {
+	console.log('channelClose ' + channel.name + ' isOn ' + isOpen);
+});
+
+socket.on('channelStateChange', function(currentChannel,isOn) {
+	console.log('channelStateChange ' + currentChannel.name + ' isOn ' + isOn + ' ' + new Date());
+	var cswitch = $('.switch-'+currentChannel.name).children(0);
+	
+	if(isOn){
+		cswitch.removeClass('switch-off');
+		cswitch.addClass('switch-on');
+	}else{
+		cswitch.removeClass('switch-on');
+		cswitch.addClass('switch-off');
+	}
 });
 
 socket.on('waterData', function(v) {

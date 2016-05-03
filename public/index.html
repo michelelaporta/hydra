@@ -1,0 +1,12 @@
+<label class="ng-binding">channel1 </label>
+<div data-ng-model="conf.enable" data-ng-click="switchChannel(conf)"
+	role="radio"
+	class="switch-mini toggle-switch ng-isolate-scope ng-valid"
+	ng-class="{ 'disabled': disabled }">
+	<div class="toggle-switch-animate switch-off"
+		ng-class="{'switch-off': !model, 'switch-on': model}">
+		<span class="switch-left ng-binding" ng-bind="onLabel">On</span><span
+			class="knob ng-binding" ng-bind="knobLabel">&nbsp;</span><span
+			class="switch-right ng-binding" ng-bind="offLabel">Off</span>
+	</div>
+</div>

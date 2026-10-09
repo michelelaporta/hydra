@@ -8,7 +8,6 @@ USE AT YOUR OWN RISK wrong wires connections can cause damage to your RaspberryP
 
 ![Alt gpio layout](./gpio.png "gpio layout")
  
-```
 
 # Arm vs x86
 
